@@ -3,9 +3,8 @@ import { ref } from "vue";
 import NavHeader from "../components/NavHeader.vue";
 import NavSideBar from "../components/NavSideBar.vue";
 import SalesChart from "@/components/SalesChart.vue";
-import CarTable from "@/components/CarTable.vue";
 import OrderTable from "@/components/OrderTable.vue";
-import MaterialCharts from "@/components/MaterialsChart.vue";
+import SalesReports from "@/components/SalesReport.vue";
 
 const isSidebarVisible = ref(false);
 
@@ -23,45 +22,28 @@ function toggleSidebar() {
     <section class="content">
       <div class="main-content">
         <div class="row-container">
-          <!-- Sales Chart -->
           <div class="sales-content">
             <h1>Sales Chart</h1>
             <div class="salesChart">
               <SalesChart />
             </div>
           </div>
-          <!-- Car Table -->
-          <div class="table-content-container">
-            <h1>Market-Ready Vehicles</h1>
-            <div class="table-content">
-              <CarTable/>
-            </div>
-            <!-- Total Sales and Feedback Cards -->
-            <div class="total-sales-container">
-              <div class="total-sales-card">
-                <h2><i class="fas fa-dollar-sign"></i> Monthly Performance</h2>
-                <p>Total Sales: <span class="highlight">$320,000</span></p>
-              </div>
-              <div class="total-feedback-card">
-                <h2><i class="fas fa-comments"></i> Feedback</h2>
-                <p>Customer Feedbacks: <span class="highlight">92 Positive</span></p>
-              </div>
-            </div>
-          </div>
         </div>
+
         <div class="row-container order-table">
-          <!-- Orders Table -->
           <div class="table-content-container">
             <h1>Orders</h1>
             <div class="table-content">
-                <OrderTable />
+              <OrderTable />
             </div>
           </div>
-          <div class="material-content">
-            <!-- Material Charts -->
-            <h1>Materials</h1>
-            <div class="materialsChart">
-              <MaterialCharts />
+        </div>
+
+        <div class="row-container">
+          <div class="table-content-container">
+            <h1>Sales Reports</h1>
+            <div class="table-content">
+              <SalesReports />
             </div>
           </div>
         </div>
@@ -90,6 +72,7 @@ aside {
   display: flex;
   flex-direction: column;
   width: 100%;
+  gap: 20px;
 }
 
 section.content {
@@ -177,28 +160,5 @@ section.content {
 .total-feedback-card p {
   font-size: 1rem;
   margin: 5px 0;
-}
-
-.highlight {
-  font-weight: bold;
-  font-size: 1.25rem;
-  color: #007bff;
-}
-
-.material-content {
-  flex: 1 1 45%;
-  min-width: 300px;
-}
-
-.materialsChart {
-  width: 100%;
-  height: auto;
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 20px;
-}
-
-.order-table {
-  margin-top: 20px;
 }
 </style>

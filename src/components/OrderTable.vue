@@ -1,5 +1,4 @@
 <template>
-  <div>
     <div class="table-container">
       <div class="table-top-container">
         <div class="search-container">
@@ -35,7 +34,7 @@
             <td>{{ order.customer }}</td>
             <td>{{ order.date }}</td>
             <td>{{ order.status }}</td>
-            <td>{{ formatPrice(order.total) }}</td>
+            <td>{{ formatPrice(order.total).replace("₱", "") }}</td>
             <td>{{ order.paymentMethod }}</td>
             <td>
               <button @click="viewOrder(order)">View</button>
@@ -45,173 +44,190 @@
           </tr>
         </tbody>
       </table>
+      <button @click="openAddOrderModal">Add Order</button>
     </div>
 
-    <div v-if="viewModalVisible" class="modal">
-      <div class="modal-content">
-        <h2>Order Details</h2>
-        <p><strong>ID:</strong> {{ selectedOrder.id }}</p>
-        <p><strong>Customer:</strong> {{ selectedOrder.customer }}</p>
-        <p><strong>Date:</strong> {{ selectedOrder.date }}</p>
-        <p><strong>Status:</strong> {{ selectedOrder.status }}</p>
-        <p><strong>Total:</strong> {{ formatPrice(selectedOrder.total) }}</p>
-        <p><strong>Payment Method:</strong> {{ selectedOrder.paymentMethod }}</p>
-        <button @click="closeViewModal">Close</button>
+    <div v-if="viewModalVisible" class="modal-backdrop" @click="closeViewModal">
+      <div class="modal" @click.stop>
+        <div class="modal-content">
+          <h2>Order Details</h2>
+          <p><strong>ID:</strong> {{ selectedOrder.id }}</p>
+          <p><strong>Customer:</strong> {{ selectedOrder.customer }}</p>
+          <p><strong>Date:</strong> {{ selectedOrder.date }}</p>
+          <p><strong>Status:</strong> {{ selectedOrder.status }}</p>
+          <p><strong>Total:</strong> {{ formatPrice(selectedOrder.total).replace("₱", "") }}</p>
+          <p><strong>Payment Method:</strong> {{ selectedOrder.paymentMethod }}</p>
+          <div class="modal-buttons">
+            <button @click="closeViewModal">Close</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div v-if="editModalVisible" class="modal">
-      <div class="modal-content">
-        <h2>Edit Order</h2>
-        <label for="status">Status</label>
-        <select v-model="selectedOrder.status" id="status">
-          <option value="Pending">Pending</option>
-          <option value="Shipped">Shipped</option>
-          <option value="Completed">Completed</option>
-          <option value="Cancelled">Cancelled</option>
-          <option value="Processing">Processing</option>
-        </select>
-        <button @click="saveChanges">Save</button>
-        <button @click="closeEditModal">Cancel</button>
+    <div v-if="isModalVisible" class="modal-backdrop" @click="closeModal">
+      <div class="modal" @click.stop>
+        <div class="modal-content">
+          <h2>{{ modalTitle }}</h2>
+          <label for="customer">Customer:</label>
+          <input v-model="modalOrder.customer" id="customer" type="text" placeholder="Enter customer name" />
+          <label for="date">Date:</label>
+          <input v-model="modalOrder.date" id="date" type="date" placeholder="Enter date" />
+          <label for="status">Status:</label>
+          <select v-model="modalOrder.status" id="status">
+            <option value="Pending">Pending</option>
+            <option value="Shipped">Shipped</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+            <option value="Processing">Processing</option>
+          </select>
+          <label for="total">Total:</label>
+          <input v-model="modalOrder.total" id="total" type="number" placeholder="Enter total" />
+          <label for="paymentMethod">Payment Method:</label>
+          <select v-model="modalOrder.paymentMethod" id="paymentMethod">
+            <option value="Down Payment">Down Payment</option>
+            <option value="Credit Card">Credit Card</option>
+            <option value="PayPal">PayPal</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+            <option value="Debit Card">Debit Card</option>
+            <option value="Cash">Cash</option>
+          </select>
+          <div class="modal-buttons">
+            <button @click="saveOrder">Save</button>
+            <button @click="closeModal">Cancel</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div v-if="deleteModalVisible" class="modal">
-      <div class="modal-content">
-        <h2>Are you sure you want to delete this order?</h2>
-        <button @click="confirmDelete">Yes</button>
-        <button @click="closeDeleteModal">No</button>
+    <div v-if="deleteModalVisible" class="modal-backdrop" @click="closeDeleteModal">
+      <div class="modal" @click.stop>
+        <div class="modal-content">
+          <h2>Are you sure you want to delete this order?</h2>
+          <div class="modal-buttons">
+            <button @click="confirmDelete">Yes</button>
+            <button @click="closeDeleteModal">No</button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
+
 </template>
 
 <script>
-import { ref, computed } from "vue";
-
 export default {
   name: "OrderTable",
-  setup() {
-    const orders = ref([
-      { id: 1, customer: "John Doe", date: "2024-11-01", status: "Pending", total: 500, paymentMethod: "Credit Card" },
-      { id: 2, customer: "Jane Smith", date: "2024-11-02", status: "Shipped", total: 200, paymentMethod: "PayPal" },
-      { id: 3, customer: "Alice Johnson", date: "2024-11-05", status: "Completed", total: 1000, paymentMethod: "Bank Transfer" },
-      { id: 4, customer: "Bob Brown", date: "2024-11-06", status: "Cancelled", total: 150, paymentMethod: "Debit Card" },
-      { id: 5, customer: "Eve Adams", date: "2024-11-07", status: "Pending", total: 300, paymentMethod: "Cash" },
-      { id: 6, customer: "Charlie White", date: "2024-11-08", status: "Shipped", total: 700, paymentMethod: "PayPal" },
-      { id: 7, customer: "Grace Green", date: "2024-11-09", status: "Processing", total: 450, paymentMethod: "Credit Card" },
-      { id: 8, customer: "Hank Blue", date: "2024-11-10", status: "Completed", total: 600, paymentMethod: "Bank Transfer" },
-      { id: 9, customer: "Ivy Red", date: "2024-11-11", status: "Cancelled", total: 120, paymentMethod: "Cash" },
-      { id: 10, customer: "Jack Black", date: "2024-11-12", status: "Processing", total: 800, paymentMethod: "Debit Card" },
-    ]);
-
-    const searchQuery = ref("");
-    const currentPage = ref(1);
-    const itemsPerPage = ref(5);
-    const viewModalVisible = ref(false);
-    const editModalVisible = ref(false);
-    const deleteModalVisible = ref(false);
-    const selectedOrder = ref(null);
-
-    const totalPages = computed(() => Math.ceil(filteredOrders.value.length / itemsPerPage.value));
-
-    const filteredOrders = computed(() => {
-      return orders.value.filter(order => {
+  data() {
+    return {
+      orders: [
+        { id: 1, customer: "John Doe", date: "2024-11-01", status: "Pending", total: 500, paymentMethod: "Down Payment" },
+        { id: 2, customer: "Jane Smith", date: "2024-11-02", status: "Shipped", total: 200, paymentMethod: "PayPal" },
+        { id: 3, customer: "Alice Johnson", date: "2024-11-05", status: "Completed", total: 1000, paymentMethod: "Bank Transfer" },
+        { id: 4, customer: "Bob Brown", date: "2024-11-06", status: "Cancelled", total: 150, paymentMethod: "Debit Card" },
+        { id: 5, customer: "Eve Adams", date: "2024-11-07", status: "Pending", total: 300, paymentMethod: "Cash" },
+        { id: 6, customer: "Charlie White", date: "2024-11-08", status: "Shipped", total: 700, paymentMethod: "PayPal" },
+        { id: 7, customer: "Grace Green", date: "2024-11-09", status: "Processing", total: 450, paymentMethod: "Credit Card" },
+        { id: 8, customer: "Hank Blue", date: "2024-11-10", status: "Completed", total: 600, paymentMethod: "Bank Transfer" },
+        { id: 9, customer: "Ivy Red", date: "2024-11-11", status: "Cancelled", total: 120, paymentMethod: "Cash" },
+        { id: 10, customer: "Jack Black", date: "2024-11-12", status: "Processing", total: 800, paymentMethod: "Debit Card" },
+      ],
+      searchQuery: "",
+      currentPage: 1,
+      itemsPerPage: 5,
+      viewModalVisible: false,
+      isModalVisible: false,
+      deleteModalVisible: false,
+      selectedOrder: null,
+      modalTitle: "",
+      modalOrder: {
+         id: null,
+          customer: "",
+          date: "",
+          status: "",
+          total: 0,
+          paymentMethod: ""
+        },
+    };
+  },
+  computed: {
+    totalPages() {
+      return Math.ceil(this.filteredOrders.length / this.itemsPerPage);
+    },
+    filteredOrders() {
+      return this.orders.filter(order => {
         return (
-          order.customer.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-          order.date.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-          order.status.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-          order.paymentMethod.toLowerCase().includes(searchQuery.value.toLowerCase())
+          order.customer.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          order.date.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          order.status.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          order.paymentMethod.toLowerCase().includes(this.searchQuery.toLowerCase())
         );
       });
-    });
-
-    const filteredPaginatedOrders = computed(() => {
-      const start = (currentPage.value - 1) * itemsPerPage.value;
-      const end = start + itemsPerPage.value;
-      return filteredOrders.value.slice(start, end);
-    });
-
-    const prevPage = () => {
-      if (currentPage.value > 1) {
-        currentPage.value--;
+    },
+    filteredPaginatedOrders() {
+      const start = (this.currentPage - 1) * this.itemsPerPage;
+      const end = start + this.itemsPerPage;
+      return this.filteredOrders.slice(start, end);
+    },
+  },
+  methods: {
+    prevPage() {
+      if (this.currentPage > 1) {
+        this.currentPage--;
       }
-    };
-
-    const nextPage = () => {
-      if (currentPage.value < totalPages.value) {
-        currentPage.value++;
+    },
+    nextPage() {
+      if (this.currentPage < this.totalPages) {
+        this.currentPage++;
       }
-    };
-
-    const formatPrice = (value) => {
+    },
+    formatPrice(value) {
       return `₱${value.toLocaleString("en-US")}`;
-    };
-
-    const viewOrder = (order) => {
-      selectedOrder.value = order;
-      viewModalVisible.value = true;
-    };
-
-    const closeViewModal = () => {
-      viewModalVisible.value = false;
-    };
-
-    const editOrder = (order) => {
-      selectedOrder.value = { ...order }; // Create a copy to edit
-      editModalVisible.value = true;
-    };
-
-    const closeEditModal = () => {
-      editModalVisible.value = false;
-    };
-
-    const saveChanges = () => {
-      const index = orders.value.findIndex(order => order.id === selectedOrder.value.id);
-      if (index !== -1) {
-        orders.value[index] = selectedOrder.value;
+    },
+    viewOrder(order) {
+      this.selectedOrder = order;
+      this.viewModalVisible = true;
+    },
+    closeViewModal() {
+      this.viewModalVisible = false;
+    },
+    deleteOrder(order) {
+      this.selectedOrder = order;
+      this.deleteModalVisible = true;
+    },
+    closeDeleteModal() {
+      this.deleteModalVisible = false;
+    },
+    confirmDelete() {
+      this.orders = this.orders.filter(order => order.id !== this.selectedOrder.id);
+      this.closeDeleteModal();
+    },
+    openAddOrderModal() {
+      this.modalTitle = "Add New Order";
+      this.modalOrder = { id: null, customer: "", date: "", status: "", total: 0, paymentMethod: "" };
+      this.isModalVisible = true;
+    },
+    editOrder(order) {
+      this.modalTitle = "Edit Order";
+      this.modalOrder = { ...order };
+      this.isModalVisible = true;
+    },
+    saveOrder() {
+      if (this.modalOrder.id) {
+        // Edit existing order
+        const index = this.orders.findIndex(order => order.id === this.modalOrder.id);
+        if (index !== -1) {
+          this.orders.splice(index, 1, { ...this.modalOrder });
+        }
+      } else {
+        // Add a new order
+        const newId = this.orders.length ? Math.max(...this.orders.map(order => order.id)) + 1 : 1;
+        this.orders.push({ ...this.modalOrder, id: newId });
       }
-      closeEditModal();
-    };
-
-    const deleteOrder = (order) => {
-      selectedOrder.value = order;
-      deleteModalVisible.value = true;
-    };
-
-    const closeDeleteModal = () => {
-      deleteModalVisible.value = false;
-    };
-
-    const confirmDelete = () => {
-      orders.value = orders.value.filter(order => order.id !== selectedOrder.value.id);
-      closeDeleteModal();
-    };
-
-    return {
-      orders,
-      searchQuery,
-      currentPage,
-      itemsPerPage,
-      totalPages,
-      filteredOrders,
-      filteredPaginatedOrders,
-      prevPage,
-      nextPage,
-      formatPrice,
-      viewOrder,
-      closeViewModal,
-      editOrder,
-      closeEditModal,
-      saveChanges,
-      deleteOrder,
-      closeDeleteModal,
-      confirmDelete,
-      viewModalVisible,
-      editModalVisible,
-      deleteModalVisible,
-      selectedOrder,
-    };
+      this.closeModal();
+    },
+    closeModal() {
+      this.isModalVisible = false;
+      this.modalOrder = { id: null, customer: "", date: "", status: "", total: 0, paymentMethod: "" };
+    },
   },
 };
 </script>
@@ -293,24 +309,51 @@ button:hover {
   box-sizing: border-box;
 }
 
-.modal {
+.modal-backdrop {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: center;
   align-items: center;
-  background: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  z-index: 1000;
 }
 
-.modal-content {
-  background-color: #fff;
+.modal {
+  background-color: #ffffff;
   padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.3s ease-out;
+  z-index: 1001;
+}
+
+.modal-content p, h2 {
+  margin-bottom: 10px;
+  text-align: center
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: center
+}
+
+.modal-content label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.modal-content input {
+  width: 100%;
+  margin-bottom: 15px;
+  padding: 8px;
+  border: 1px solid #ccc;
   border-radius: 5px;
-  width: 300px;
-  text-align: center;
 }
 
 button {
@@ -321,6 +364,8 @@ button {
   display: flex;
   justify-content: space-between;
 }
+
+
 
 @media (max-width: 1500px) {
   .table-top-container {

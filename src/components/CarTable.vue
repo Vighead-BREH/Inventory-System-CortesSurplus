@@ -1,90 +1,110 @@
 <template>
-  <div>
-    <div class="table-container">
-      <!-- Pagination Controls -->
-      <div class="pagination-controls">
-        <button :disabled="currentPage <= 1" @click="prevPage">Prev</button>
-        <span>Page {{ currentPage }} / {{ totalPages }}</span>
-        <button :disabled="currentPage >= totalPages" @click="nextPage">Next</button>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th @click="changeSort('id')">
-              ID
-              <span class="sort-icon">{{ getSortIcon('id') }}</span>
-            </th>
-            <th @click="changeSort('unitName')">
-              Unit Name
-              <span class="sort-icon">{{ getSortIcon('unitName') }}</span>
-            </th>
-            <th @click="changeSort('quantity')">
-              Quantity
-              <span class="sort-icon">{{ getSortIcon('quantity') }}</span>
-            </th>
-            <th @click="changeSort('price')">
-              Price
-              <span class="sort-icon">{{ getSortIcon('price') }}</span>
-            </th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="car in paginatedSortedCars" :key="car.id">
-            <td>{{ car.id }}</td>
-            <td>{{ car.unitName }}</td>
-            <td>
-              <div class="quantity-indicator">
-                {{ car.quantity }}
-                <span
-                  class="led"
-                  :class="{ green: car.quantity > 0, red: car.quantity === 0 }"
-                ></span>
-              </div>
-            </td>
-            <td>{{ formatPrice(car.price) }}</td>
-            <td>
-              <button @click="editCar(car)">Edit</button>
-              <button @click="deleteCar(car.id)">Delete</button>
-              <button @click="openSoldCarModal(car)">Sold</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+  <div class="table-container">
+    <div class="pagination-controls">
+      <button :disabled="currentPage <= 1" @click="prevPage">Prev</button>
+      <span>Page {{ currentPage }} / {{ totalPages }}</span>
+      <button :disabled="currentPage >= totalPages" @click="nextPage">Next</button>
     </div>
-
+    <table>
+      <thead>
+        <tr>
+          <th @click="changeSort('id')">
+            ID
+            <span class="sort-icon">{{ getSortIcon('id') }}</span>
+          </th>
+          <th @click="changeSort('unitName')">
+            Unit Name
+            <span class="sort-icon">{{ getSortIcon('unitName') }}</span>
+          </th>
+          <th @click="changeSort('quantity')">
+            Quantity
+            <span class="sort-icon">{{ getSortIcon('quantity') }}</span>
+          </th>
+          <th @click="changeSort('price')">
+            Price
+            <span class="sort-icon">{{ getSortIcon('price') }}</span>
+          </th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="car in paginatedSortedCars" :key="car.id">
+          <td>{{ car.id }}</td>
+          <td>{{ car.unitName }}</td>
+          <td>
+            <div class="quantity-indicator">
+              {{ car.quantity }}
+              <span
+                class="led"
+                :class="{ green: car.quantity > 0, red: car.quantity === 0 }"
+              ></span>
+            </div>
+          </td>
+          <td>{{ formatPrice(car.price) }}</td>
+          <td>
+            <button @click="editCar(car)">Edit</button>
+            <button @click="openDeleteCarModal(car)">Delete</button>
+            <button @click="openSoldCarModal(car)">Sold</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
     <button @click="openAddCarModal" style="margin: 5px 0 0 0;">Add Car</button>
+  </div>
 
-    <!-- Add Car Modal -->
-    <div v-if="isModalVisible" class="modal-backdrop" @click="closeModal">
-      <div class="modal" @click.stop>
-        <div class="modal-content">
-          <h2>{{ modalTitle }}</h2>
-          <label for="unitName">Unit Name:</label>
-          <input v-model="modalCar.unitName" id="unitName" type="text" placeholder="Enter unit name" />
-          <label for="quantity">Quantity:</label>
-          <input v-model="modalCar.quantity" id="quantity" type="number" placeholder="Enter quantity" />
-          <label for="price">Price:</label>
-          <input v-model="modalCar.price" id="price" type="number" placeholder="Enter price" />
+
+  <!-- Add Car Modal -->
+  <div v-if="isModalVisible" class="modal-backdrop" @click="closeModal">
+    <div class="modal" @click.stop>
+      <div class="modal-content">
+        <h2>{{ modalTitle }}</h2>
+        <label for="unitName">Unit Name:</label>
+        <input v-model="modalCar.unitName" id="unitName" type="text" placeholder="Enter unit name" />
+        <label for="quantity">Quantity:</label>
+        <input v-model="modalCar.quantity" id="quantity" type="number" placeholder="Enter quantity" />
+        <p v-if="modalCar.quantity < 0" class="error">Quantity cannot be negative</p>
+        <label for="price">Price:</label>
+        <input v-model="modalCar.price" id="price" type="number" placeholder="Enter price" />
+        <p v-if="modalCar.price < 0" class="error">Price cannot be negative</p>
+        <div>
           <button @click="saveCar">Save</button>
           <button @click="closeModal">Cancel</button>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Sold Car Modal -->
-    <div v-if="isSoldModalVisible" class="modal-backdrop" @click="closeSoldModal">
-      <div class="modal" @click.stop>
-        <div class="modal-content">
-          <h2>Mark Car as Sold</h2>
-          <p>Are you sure you want to mark this car as sold?</p>
-          <p><strong>{{ soldCar.unitName }}</strong></p>
-          <label for="soldQuantity">Quantity Sold:</label>
-          <input v-model="soldCar.soldQuantity" id="soldQuantity" type="number" placeholder="Enter quantity sold" />
-          <p>Price per unit: {{ formatPrice(soldCar.price) }}</p>
-          <p>Total Price: {{ formatPrice(soldCar.soldQuantity * soldCar.price) }}</p>
-          <button @click="markAsSold">Yes, Sold</button>
+  <!-- Sold Car Modal -->
+  <div v-if="isSoldModalVisible" class="modal-backdrop" @click="closeSoldModal">
+    <div class="modal" @click.stop>
+      <div class="modal-content">
+        <h2>Mark Car as Sold</h2>
+        <p>Are you sure you want to mark this car as sold?</p>
+        <p><strong>{{ soldCar.unitName }}</strong></p>
+        <label for="soldQuantity">Quantity Sold:</label>
+        <input v-model="soldCar.soldQuantity" id="soldQuantity" type="number" placeholder="Enter quantity sold" />
+        <p v-if = "soldCar.soldQuantity > soldCar.quantity" class="error">Not enough stock.</p>
+        <p v-if = "soldCar.soldQuantity < 0" class="error">Please input a valid number.</p>
+        <p>Price per unit: {{ formatPrice(soldCar.price) }}</p>
+        <p v-if = "soldCar.soldQuantity > 0">Total Price: {{ formatPrice(soldCar.soldQuantity * soldCar.price) }}</p>
+        <p v-else >Total Price: {{ formatPrice(0) }}</p>
+        <div>
+          <button @click="markAsSold">Yes</button>
           <button @click="closeSoldModal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Car Modal -->
+  <div v-if="isDeleteModalVisible" class="modal-backdrop" @click="closeDeleteModal">
+    <div class="modal" @click.stop>
+      <div class="modal-content">
+        <h2>Are you sure you want to delete this car?</h2>
+        <p><strong>{{ carToDelete.unitName }}</strong></p>
+        <div class="modal-buttons">
+          <button @click="deleteCar(carToDelete.id)">Yes</button>
+          <button @click="closeDeleteModal">Cancel</button>
         </div>
       </div>
     </div>
@@ -110,10 +130,12 @@ export default {
       ],
       currentPage: 1,
       itemsPerPage: 5,
-      sortBy: "id",
-      sortOrder: "asc", // 'asc' or 'desc'
+      sortBy: "",
+      sortOrder: "asc",
       isModalVisible: false,
       isSoldModalVisible: false,
+      isDeleteModalVisible: false,
+      carToDelete: null,
       modalTitle: "",
       modalCar: {
         id: null,
@@ -189,6 +211,10 @@ export default {
       this.isModalVisible = true;
     },
     saveCar() {
+      if (this.modalCar.quantity < 0 || this.modalCar.price < 0) {
+        this.isModalVisible = true;
+        return;
+      }
       if (this.modalCar.id) {
         const index = this.cars.findIndex((car) => car.id === this.modalCar.id);
         if (index !== -1) {
@@ -206,6 +232,14 @@ export default {
     },
     deleteCar(id) {
       this.cars = this.cars.filter((car) => car.id !== id);
+      this.closeDeleteModal();
+    },
+    openDeleteCarModal(car) {
+      this.carToDelete = { ...car };
+      this.isDeleteModalVisible = true;
+    },
+    closeDeleteModal() {
+      this.isDeleteModalVisible = false;
     },
     openSoldCarModal(car) {
       this.soldCar = { ...car, soldQuantity: 0 };
@@ -217,10 +251,14 @@ export default {
     markAsSold() {
       if (this.soldCar.soldQuantity > 0) {
         const car = this.cars.find((c) => c.id === this.soldCar.id);
-        if (car) {
+        if (car.quantity < this.soldCar.soldQuantity) {
+          this.soldCar.soldQuantity = car.quantity;
+        } else if (car) {
           car.quantity -= this.soldCar.soldQuantity;
+          this.soldCar.soldQuantity = 0;
+          this.closeSoldModal();
+          return;
         }
-        this.closeSoldModal();
       }
     },
   },
@@ -229,6 +267,13 @@ export default {
 
 
 <style scoped>
+
+.error {
+  color: red;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -289,6 +334,16 @@ h2 {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
   animation: fadeIn 0.3s ease-out;
   z-index: 1001;
+}
+
+.modal-content p, h2 {
+  margin-bottom: 10px;
+  text-align: center
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: center
 }
 
 .modal-content label {

@@ -3,23 +3,22 @@
   import '@fortawesome/fontawesome-free/js/all.js';
 </script>
 <template>
-  <!-- Use v-show to toggle visibility smoothly -->
   <div :class="['sidebar', { visible: visible }]">
     <ul>
       <li>
-        <a href="#">
+        <router-link to="/">
           <i class="fas fa-home"></i> Home
-        </a>
+        </router-link>
       </li>
       <li>
-        <a href="#">
+        <router-link to="/sales">
           <i class="fas fa-chart-line"></i> Sales
-        </a>
+        </router-link>
       </li>
       <li>
-        <a href="#">
-          <i class="fas fa-boxes"></i> Inventory
-        </a>
+        <router-link to="/inventory">
+          <i class="fas fa-box"></i> Inventory
+        </router-link>
       </li>
       <li>
         <a href="#">

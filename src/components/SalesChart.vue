@@ -31,13 +31,13 @@
             y: {
               beginAtZero: true,
               grid: {
-                color: "black",
+                color: "#333",
               },
             },
             x: {
               beginAtZero: true,
               grid: {
-                color: "black",
+                color: "#333",
               },
             },
           },
