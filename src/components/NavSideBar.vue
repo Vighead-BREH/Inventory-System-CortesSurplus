@@ -1,6 +1,7 @@
 <script setup>
   import '@fortawesome/fontawesome-free/css/all.css';
   import '@fortawesome/fontawesome-free/js/all.js';
+
 </script>
 <template>
   <div :class="['sidebar', { visible: visible }]">
