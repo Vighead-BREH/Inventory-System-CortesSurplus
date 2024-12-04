@@ -1,174 +1,377 @@
 <template>
-    <div class="table-container">
-      <div class="table-top-container">
-        <div class="search-container">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search orders..."
-            class="search-input"
-          />
-        </div>
-        <div class="pagination-controls">
-          <button :disabled="currentPage <= 1" @click="prevPage">Prev</button>
-          <span>Page {{ currentPage }} / {{ totalPages }}</span>
-          <button :disabled="currentPage >= totalPages" @click="nextPage">Next</button>
-        </div>
+  <div class="table-container">
+    <div class="table-top-container">
+      <div class="search-container">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search orders..."
+          class="search-input"
+        />
       </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Customer</th>
-            <th>Date</th>
-            <th>Status</th>
-            <th>Total</th>
-            <th>Payment Method</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="order in filteredPaginatedOrders" :key="order.id">
-            <td>{{ order.id }}</td>
-            <td>{{ order.customer }}</td>
-            <td>{{ order.date }}</td>
-            <td>{{ order.status }}</td>
-            <td>{{ formatPrice(order.total).replace("₱", "") }}</td>
-            <td>{{ order.paymentMethod }}</td>
-            <td>
-              <button @click="viewOrder(order)">View</button>
-              <button @click="editOrder(order)">Edit</button>
-              <button @click="deleteOrder(order)">Delete</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <button @click="openAddOrderModal">Add Order</button>
-    </div>
-
-    <div v-if="viewModalVisible" class="modal-backdrop" @click="closeViewModal">
-      <div class="modal" @click.stop>
-        <div class="modal-content">
-          <h2>Order Details</h2>
-          <p><strong>ID:</strong> {{ selectedOrder.id }}</p>
-          <p><strong>Customer:</strong> {{ selectedOrder.customer }}</p>
-          <p><strong>Date:</strong> {{ selectedOrder.date }}</p>
-          <p><strong>Status:</strong> {{ selectedOrder.status }}</p>
-          <p><strong>Total:</strong> {{ formatPrice(selectedOrder.total).replace("₱", "") }}</p>
-          <p><strong>Payment Method:</strong> {{ selectedOrder.paymentMethod }}</p>
-          <div class="modal-buttons">
-            <button @click="closeViewModal">Close</button>
-          </div>
-        </div>
+      <div class="pagination-controls">
+        <button :disabled="currentPage <= 1" @click="prevPage">Prev</button>
+        <span>Page {{ currentPage }} / {{ totalPages }}</span>
+        <button :disabled="currentPage >= totalPages" @click="nextPage">Next</button>
       </div>
     </div>
 
-    <div v-if="isModalVisible" class="modal-backdrop" @click="closeModal">
-      <div class="modal" @click.stop>
-        <div class="modal-content">
-          <h2>{{ modalTitle }}</h2>
-          <label for="customer">Customer:</label>
-          <input v-model="modalOrder.customer" id="customer" type="text" placeholder="Enter customer name" />
-          <label for="date">Date:</label>
-          <input v-model="modalOrder.date" id="date" type="date" placeholder="Enter date" />
-          <label for="status">Status:</label>
-          <select v-model="modalOrder.status" id="status">
-            <option value="Pending">Pending</option>
-            <option value="Shipped">Shipped</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
-            <option value="Processing">Processing</option>
-          </select>
-          <label for="total">Total:</label>
-          <input v-model="modalOrder.total" id="total" type="number" placeholder="Enter total" />
-          <label for="paymentMethod">Payment Method:</label>
-          <select v-model="modalOrder.paymentMethod" id="paymentMethod">
-            <option value="Down Payment">Down Payment</option>
-            <option value="Credit Card">Credit Card</option>
-            <option value="PayPal">PayPal</option>
-            <option value="Bank Transfer">Bank Transfer</option>
-            <option value="Debit Card">Debit Card</option>
-            <option value="Cash">Cash</option>
-          </select>
-          <div class="modal-buttons">
-            <button @click="saveOrder">Save</button>
-            <button @click="closeModal">Cancel</button>
-          </div>
+    <table>
+      <thead>
+        <tr>
+          <th @click="changeSort('id')">
+            <div class="th-gap">
+              <span class="nowrap">ID</span>
+              <span class="sort-icon">{{ getSortIcon('id') }}</span>
+            </div>
+          </th>
+          <th @click="changeSort('customer')">
+            <div class="th-gap">
+              <span class="nowrap">Customer</span>
+              <span class="sort-icon">{{ getSortIcon('customer') }}</span>
+            </div>
+          </th>
+          <th @click="changeSort('date')">
+            <div class="th-gap">
+              <span class="nowrap">Date</span>
+              <span class="sort-icon">{{ getSortIcon('date') }}</span>
+            </div>
+          </th>
+          <th @click="changeSort('status')">
+            <div class="th-gap">
+              <span class="nowrap">Status</span>
+              <span class="sort-icon">{{ getSortIcon('status') }}</span>
+            </div>
+          </th>
+          <th @click="changeSort('total')">
+            <div class="th-gap">
+              <span class="nowrap">Total</span>
+              <span class="sort-icon">{{ getSortIcon('total') }}</span>
+            </div>
+          </th>
+          <th @click="changeSort('paymentMethod')">
+            <div class="th-gap">
+              <span class="nowrap">Payment Method</span>
+              <span class="sort-icon">{{ getSortIcon('paymentMethod') }}</span>
+            </div>
+          </th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="order in filteredPaginatedOrders" :key="order.id">
+          <td>{{ order.id }}</td>
+          <td>{{ order.customer }}</td>
+          <td>{{ order.date }}</td>
+          <td>{{ order.status }}</td>
+          <td>{{ formatPrice(order.total).replace('₱', '') }}</td>
+          <td>{{ order.paymentMethod }}</td>
+          <td>
+            <div class="btn-gap">
+              <button @click="viewOrder(order)"><i class="fas fa-eye"></i></button>
+              <button @click="editOrder(order)"><i class="fas fa-edit" style="color: #007bff;"></i></button>
+              <button
+                v-if="order.status !== 'Completed'"
+                @click="deleteOrder(order)">
+                <i class="fas fa-trash" style="color: red;"></i>
+              </button>
+
+              <button
+                v-if="order.status === 'Completed'"
+                @click="markAsChecked(order)">
+                <i class="fas fa-check" style="color: green;"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <button @click="openAddOrderModal" style="margin: 5px 0 0 0; color: #007bff;"><i class="fa-solid fa-plus"></i></button>
+  </div>
+
+  <div v-if="viewModalVisible" class="modal-backdrop" @click="closeViewModal">
+    <div class="modal" @click.stop>
+      <div class="modal-content">
+        <h2>Order Details</h2>
+        <p><strong>ID:</strong> {{ selectedOrder.id }}</p>
+        <p><strong>Customer:</strong> {{ selectedOrder.customer }}</p>
+        <p><strong>Date:</strong> {{ selectedOrder.date }}</p>
+        <p><strong>Status:</strong> {{ selectedOrder.status }}</p>
+        <p><strong>Total:</strong> {{ formatPrice(selectedOrder.total).replace('₱', '') }}</p>
+        <p><strong>Payment Method:</strong> {{ selectedOrder.paymentMethod }}</p>
+        <div class="modal-buttons">
+          <button @click="closeViewModal">Close</button>
         </div>
       </div>
     </div>
+  </div>
 
-    <div v-if="deleteModalVisible" class="modal-backdrop" @click="closeDeleteModal">
-      <div class="modal" @click.stop>
-        <div class="modal-content">
-          <h2>Are you sure you want to delete this order?</h2>
-          <div class="modal-buttons">
-            <button @click="confirmDelete">Yes</button>
-            <button @click="closeDeleteModal">No</button>
-          </div>
+  <div v-if="isModalVisible" class="modal-backdrop" @click="closeModal">
+    <div class="modal" @click.stop>
+      <div class="modal-content">
+        <h2>{{ modalTitle }}</h2>
+
+        <label for="customer">Customer:</label>
+        <input
+          v-model="modalOrder.customer"
+          id="customer"
+          type="text"
+          placeholder="Enter customer name"
+          maxlength="20"
+        />
+        <p class="error" v-if="this.customerError = modalOrder.customer.trim() === ''">Customer name is required.</p>
+        <p class="error" v-if="modalOrder.customer.length > 20">Customer name exceeds the maximum limit (20 characters).</p>
+
+        <label for="date">Date:</label>
+        <input
+          v-model="modalOrder.date"
+          id="date"
+          type="date"
+          placeholder="Enter date"
+        />
+        <p class="error" v-if="this.dateError = modalOrder.date.trim() === ''">Date is required.</p>
+
+        <label for="status">Status:</label>
+        <select v-model="modalOrder.status" id="status">
+          <option value="">Select Status</option>
+          <option value="Pending">Pending</option>
+          <option value="Shipped">Shipped</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+          <option value="Processing">Processing</option>
+        </select>
+        <p class="error" v-if="this.statusError = modalOrder.status.trim() === ''">Status is required.</p>
+
+        <label for="total">Total:</label>
+        <input
+          v-model="modalOrder.total"
+          id="total"
+          type="number"
+          placeholder="Enter total"
+        />
+        <p class="error" v-if="this.totalError = this.modalOrder.total <= 0 || isNaN(this.modalOrder.total)">Please enter a valid total</p>
+
+        <label for="paymentMethod">Payment Method:</label>
+        <select v-model="modalOrder.paymentMethod" id="paymentMethod">
+          <option value="">Select Payment Method</option>
+          <option value="Down Payment">Down Payment</option>
+          <option value="Credit Card">Credit Card</option>
+          <option value="PayPal">PayPal</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Debit Card">Debit Card</option>
+          <option value="Cash">Cash</option>
+        </select>
+        <p class="error" v-if="this.paymentError = modalOrder.paymentMethod.trim() === ''">Payment Method is required.</p>
+
+        <div class="modal-buttons btn-gap">
+          <button @click="saveOrder" :disabled="hasValidationErrors">Save</button>
+          <button @click="closeModal">Cancel</button>
         </div>
       </div>
     </div>
+  </div>
 
+  <div v-if="deleteModalVisible" class="modal-backdrop" @click="closeDeleteModal">
+    <div class="modal" @click.stop>
+      <div class="modal-content">
+        <h2>Are you sure you want to delete this order?</h2>
+        <div class="modal-buttons btn-gap">
+          <button @click="confirmDelete">Yes</button>
+          <button @click="closeDeleteModal">No</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="checkModalVisible" class="modal-backdrop" @click="closeCheckModal">
+  <div class="modal" @click.stop>
+    <div class="modal-content">
+      <h2>Order Checked</h2>
+      <p><strong>ID:</strong> {{ checkedOrder.id }}</p>
+      <p><strong>Customer:</strong> {{ checkedOrder.customer }}</p>
+      <p><strong>Date:</strong> {{ checkedOrder.date }}</p>
+      <p><strong>Total:</strong> {{ formatPrice(checkedOrder.total).replace('₱', '') }}</p>
+      <p>This order is now marked as checked.</p>
+      <div class="modal-buttons btn-gap">
+        <button @click="closeCheckModal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 </template>
 
 <script>
 export default {
   name: "OrderTable",
+  emits: ['orderChecked'],
   data() {
     return {
       orders: [
-        { id: 1, customer: "John Doe", date: "2024-11-01", status: "Pending", total: 500, paymentMethod: "Down Payment" },
-        { id: 2, customer: "Jane Smith", date: "2024-11-02", status: "Shipped", total: 200, paymentMethod: "PayPal" },
-        { id: 3, customer: "Alice Johnson", date: "2024-11-05", status: "Completed", total: 1000, paymentMethod: "Bank Transfer" },
-        { id: 4, customer: "Bob Brown", date: "2024-11-06", status: "Cancelled", total: 150, paymentMethod: "Debit Card" },
-        { id: 5, customer: "Eve Adams", date: "2024-11-07", status: "Pending", total: 300, paymentMethod: "Cash" },
-        { id: 6, customer: "Charlie White", date: "2024-11-08", status: "Shipped", total: 700, paymentMethod: "PayPal" },
-        { id: 7, customer: "Grace Green", date: "2024-11-09", status: "Processing", total: 450, paymentMethod: "Credit Card" },
-        { id: 8, customer: "Hank Blue", date: "2024-11-10", status: "Completed", total: 600, paymentMethod: "Bank Transfer" },
-        { id: 9, customer: "Ivy Red", date: "2024-11-11", status: "Cancelled", total: 120, paymentMethod: "Cash" },
-        { id: 10, customer: "Jack Black", date: "2024-11-12", status: "Processing", total: 800, paymentMethod: "Debit Card" },
+        {
+          id: 1,
+          customer: "John Doe",
+          date: "2024-11-01",
+          status: "Pending",
+          total: 500,
+          paymentMethod: "Down Payment",
+        },
+        {
+          id: 2,
+          customer: "Jane Smith",
+          date: "2024-11-02",
+          status: "Shipped",
+          total: 200,
+          paymentMethod: "PayPal",
+        },
+        {
+          id: 3,
+          customer: "Alice Johnson",
+          date: "2024-11-05",
+          status: "Completed",
+          total: 1000,
+          paymentMethod: "Bank Transfer",
+        },
+        {
+          id: 4,
+          customer: "Bob Brown",
+          date: "2024-11-06",
+          status: "Cancelled",
+          total: 150,
+          paymentMethod: "Debit Card",
+        },
+        {
+          id: 5,
+          customer: "Eve Adams",
+          date: "2024-11-07",
+          status: "Pending",
+          total: 300,
+          paymentMethod: "Cash",
+        },
+        {
+          id: 6,
+          customer: "Charlie White",
+          date: "2024-11-08",
+          status: "Shipped",
+          total: 700,
+          paymentMethod: "PayPal",
+        },
+        {
+          id: 7,
+          customer: "Grace Green",
+          date: "2024-11-09",
+          status: "Processing",
+          total: 450,
+          paymentMethod: "Credit Card",
+        },
+        {
+          id: 8,
+          customer: "Hank Blue",
+          date: "2024-11-10",
+          status: "Completed",
+          total: 600,
+          paymentMethod: "Bank Transfer",
+        },
+        {
+          id: 9,
+          customer: "Ivy Red",
+          date: "2024-11-11",
+          status: "Cancelled",
+          total: 120,
+          paymentMethod: "Cash",
+        },
+        {
+          id: 10,
+          customer: "Jack Black",
+          date: "2024-11-12",
+          status: "Processing",
+          total: 800,
+          paymentMethod: "Debit Card",
+        },
       ],
       searchQuery: "",
       currentPage: 1,
       itemsPerPage: 5,
+      sortBy: "",
+      sortOrder: "asc",
       viewModalVisible: false,
       isModalVisible: false,
       deleteModalVisible: false,
+      checkModalVisible: false,
+      checkedOrder: null,
       selectedOrder: null,
       modalTitle: "",
       modalOrder: {
-         id: null,
-          customer: "",
-          date: "",
-          status: "",
-          total: 0,
-          paymentMethod: ""
-        },
+        id: null,
+        customer: "",
+        date: "",
+        status: "",
+        total: 0,
+        paymentMethod: "",
+      },
+      customerError: '',
+      dateError: '',
+      statusError: '',
+      totalError: '',
+      paymentError: '',
     };
   },
   computed: {
+    hasValidationErrors() {
+      return !this.modalOrder.customer ||
+      this.modalOrder.customer.length === 0 ||
+      this.modalOrder.date.length === 0 ||
+      this.modalOrder.status.length === 0 ||
+      this.modalOrder.total <= 0 ||
+      isNaN(this.modalOrder.total) ||
+      this.modalOrder.paymentMethod.length === 0;
+    },
     totalPages() {
-      return Math.ceil(this.filteredOrders.length / this.itemsPerPage);
-    },
-    filteredOrders() {
-      return this.orders.filter(order => {
-        return (
-          order.customer.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-          order.date.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-          order.status.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-          order.paymentMethod.toLowerCase().includes(this.searchQuery.toLowerCase())
-        );
-      });
-    },
-    filteredPaginatedOrders() {
-      const start = (this.currentPage - 1) * this.itemsPerPage;
-      const end = start + this.itemsPerPage;
-      return this.filteredOrders.slice(start, end);
-    },
+    return Math.ceil(this.filteredOrders.length / this.itemsPerPage);
   },
+  filteredOrders() {
+    let filtered = this.orders.filter((order) => {
+      return (
+        order.customer.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        order.date.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        order.status.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        order.paymentMethod.toLowerCase().includes(this.searchQuery.toLowerCase())
+      );
+    });
+
+    if (this.sortBy) {
+      filtered.sort((a, b) => {
+        const factor = this.sortOrder === "asc" ? 1 : -1;
+        if (typeof a[this.sortBy] === "string") {
+          return factor * a[this.sortBy].localeCompare(b[this.sortBy]);
+        } else {
+          return factor * (a[this.sortBy] - b[this.sortBy]);
+        }
+      });
+    }
+
+    return filtered;
+  },
+  filteredPaginatedOrders() {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    const end = start + this.itemsPerPage;
+    return this.filteredOrders.slice(start, end);
+  },
+},
   methods: {
+    changeSort(column) {
+      if (this.sortBy === column) {
+        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc'
+      } else {
+        this.sortBy = column
+        this.sortOrder = 'asc'
+      }
+    },
+    getSortIcon(column) {
+      if (this.sortBy === column) {
+        return this.sortOrder === 'asc' ? '⬆' : '⬇'
+      }
+      return '⬍'
+    },
     prevPage() {
       if (this.currentPage > 1) {
         this.currentPage--;
@@ -197,12 +400,19 @@ export default {
       this.deleteModalVisible = false;
     },
     confirmDelete() {
-      this.orders = this.orders.filter(order => order.id !== this.selectedOrder.id);
+      this.orders = this.orders.filter((order) => order.id !== this.selectedOrder.id);
       this.closeDeleteModal();
     },
     openAddOrderModal() {
       this.modalTitle = "Add New Order";
-      this.modalOrder = { id: null, customer: "", date: "", status: "", total: 0, paymentMethod: "" };
+      this.modalOrder = {
+        id: null,
+        customer: "",
+        date: "",
+        status: "",
+        total: 0,
+        paymentMethod: "",
+      };
       this.isModalVisible = true;
     },
     editOrder(order) {
@@ -212,27 +422,51 @@ export default {
     },
     saveOrder() {
       if (this.modalOrder.id) {
-        // Edit existing order
-        const index = this.orders.findIndex(order => order.id === this.modalOrder.id);
+        const index = this.orders.findIndex((order) => order.id === this.modalOrder.id);
         if (index !== -1) {
           this.orders.splice(index, 1, { ...this.modalOrder });
         }
       } else {
-        // Add a new order
-        const newId = this.orders.length ? Math.max(...this.orders.map(order => order.id)) + 1 : 1;
+        const newId = this.orders.length
+          ? Math.max(...this.orders.map((order) => order.id)) + 1
+          : 1;
         this.orders.push({ ...this.modalOrder, id: newId });
       }
       this.closeModal();
     },
     closeModal() {
       this.isModalVisible = false;
-      this.modalOrder = { id: null, customer: "", date: "", status: "", total: 0, paymentMethod: "" };
+      this.modalOrder = {
+        id: null,
+        customer: "",
+        date: "",
+        status: "",
+        total: 0,
+        paymentMethod: "",
+      };
     },
+    markAsChecked(order) {
+      this.checkedOrder = order;
+      this.checkModalVisible = true;
+      this.orders = this.orders.filter((o) => o.id !== order.id);
+      this.$emit("orderChecked", order.total);
+    },
+    closeCheckModal() {
+      this.checkModalVisible = false;
+    },
+
   },
 };
 </script>
 
+
 <style scoped>
+.error {
+  color: red;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -245,10 +479,22 @@ td {
   text-align: left;
 }
 
+th.nowrap {
+  white-space: nowrap;
+}
+
+.th-gap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 th {
   background-color: #040d1d;
   color: #fff;
+  cursor: pointer;
 }
+
 
 .table-container {
   overflow-x: auto;
@@ -256,7 +502,6 @@ th {
 }
 
 button {
-  margin-left: 5px;
   padding: 5px 10px;
   cursor: pointer;
   background-color: #f0f0f0;
@@ -266,6 +511,12 @@ button {
 
 button:hover {
   background-color: #ddd;
+}
+
+.btn-gap {
+  display: flex;
+  justify-content: space-around;
+  gap: 5px;
 }
 
 .pagination-controls {
@@ -333,14 +584,15 @@ button:hover {
   z-index: 1001;
 }
 
-.modal-content p, h2 {
+.modal-content p,
+h2 {
   margin-bottom: 10px;
-  text-align: center
+  text-align: center;
 }
 
 .modal-buttons {
   display: flex;
-  justify-content: center
+  justify-content: center;
 }
 
 .modal-content label {
@@ -348,7 +600,7 @@ button:hover {
   margin-bottom: 8px;
 }
 
-.modal-content input {
+.modal-content input, select {
   width: 100%;
   margin-bottom: 15px;
   padding: 8px;
@@ -356,25 +608,45 @@ button:hover {
   border-radius: 5px;
 }
 
-button {
-  margin-top: 10px;
-}
-
 .table-top-container {
   display: flex;
   justify-content: space-between;
 }
 
+.sort-icon {
+  font-size: 12px;
+  color: #007bff;
+}
+.sort-icon:hover {
+  color: #fff;
+}
 
+.btn-gap {
+  display: flex;
+  gap: 5px;
+}
 
-@media (max-width: 1500px) {
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 1700px) {
   .table-top-container {
-    min-width: 389px;
+    min-width: 474px;
     width: 100%;
   }
 
   table {
+    width: 100%;
     font-size: 12px;
+    height: 300px;
   }
 
   th,
@@ -385,7 +657,6 @@ button {
   button {
     font-size: 12px;
     padding: 4px 8px;
-    margin: 0;
   }
 
   .pagination-controls span {
@@ -393,8 +664,12 @@ button {
   }
 
   .pagination-controls button {
-    font-size: 12px;
-    padding: 3px 8px;
+    font-size: 10px;
+    padding: 5px;
+  }
+
+  .search-input {
+    padding: 0 10px;
   }
 }
 </style>

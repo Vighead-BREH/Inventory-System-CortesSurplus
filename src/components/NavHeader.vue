@@ -1,7 +1,10 @@
 <template>
   <header class="app-header">
     <div class="container">
-      <h1 class="logo">Cortes Surplus</h1>
+      <div class="logo-container">
+        <img src="/src/components/Logo/CortesSurplusLogo.png" class="logo">
+        <h1>Cortes Surplus</h1>
+      </div>
       <button
         @click="toggleSidebar"
         class="sidebar-toggle-btn"
@@ -33,7 +36,7 @@ export default {
 .app-header {
   background-color: #040d1d;
   color: #fff;
-  padding: 1rem 2rem;
+  padding: 1rem;
   border-bottom: #797878 solid 1px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
   position: sticky;
@@ -47,7 +50,18 @@ export default {
   justify-content: space-between;
 }
 
-.logo {
+.logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 15%;
+}
+
+.logo-container img {
+  width: 70px;
+}
+
+.logo-container h1 {
   font-size: 1.5rem;
   font-weight: bold;
   text-align: center;
@@ -72,6 +86,11 @@ export default {
 
 .sidebar-toggle-btn:hover {
   color: #797878;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
 }
 
 @media (max-width: 768px) {

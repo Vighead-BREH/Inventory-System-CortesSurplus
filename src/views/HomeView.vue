@@ -8,10 +8,16 @@ import OrderTable from "@/components/OrderTable.vue";
 import MaterialCharts from "@/components/MaterialsChart.vue";
 
 const isSidebarVisible = ref(false);
+const totalSales = ref(0);
 
 function toggleSidebar() {
   isSidebarVisible.value = !isSidebarVisible.value;
 }
+
+function updateTotalSales(amount) {
+  totalSales.value += amount;
+}
+
 </script>
 
 <template>
@@ -34,13 +40,13 @@ function toggleSidebar() {
           <div class="table-content-container">
             <h1>Market-Ready Vehicles</h1>
             <div class="table-content">
-              <CarTable/>
+              <CarTable @car-sold="updateTotalSales" />
             </div>
             <!-- Total Sales and Feedback Cards -->
             <div class="total-sales-container">
               <div class="total-sales-card">
-                <h2><i class="fas fa-dollar-sign"></i> Monthly Performance</h2>
-                <p>Total Sales: <span class="highlight">$320,000</span></p>
+                <h2><i class="fas fa-peso-sign"></i> Monthly Performance</h2>
+                <p>Total Sales: <span class="highlight">₱{{ totalSales.toLocaleString('en-US') }}</span></p>
               </div>
               <div class="total-feedback-card">
                 <h2><i class="fas fa-comments"></i> Feedback</h2>
@@ -54,7 +60,7 @@ function toggleSidebar() {
           <div class="table-content-container">
             <h1>Orders</h1>
             <div class="table-content">
-                <OrderTable />
+              <OrderTable @orderChecked="updateTotalSales" />
             </div>
           </div>
           <div class="material-content">
@@ -79,7 +85,6 @@ h1 {
 .main {
   display: flex;
   height: auto;
-  background-color: var(--background-dark);
 }
 
 aside {
@@ -200,5 +205,17 @@ section.content {
 
 .order-table {
   margin-top: 20px;
+}
+
+@media (max-width: 1326px) {
+  .total-sales-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .total-sales-card, .total-feedback-card {
+    width: 100%;
+  }
 }
 </style>
