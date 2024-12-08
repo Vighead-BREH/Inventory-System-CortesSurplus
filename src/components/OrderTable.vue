@@ -64,7 +64,7 @@
           <td>{{ order.customer }}</td>
           <td>{{ order.date }}</td>
           <td>{{ order.status }}</td>
-          <td>{{ formatPrice(order.total).replace('₱', '') }}</td>
+          <td>{{ formatPrice(order.total) }}</td>
           <td>{{ order.paymentMethod }}</td>
           <td>
             <div class="btn-gap">
@@ -106,6 +106,7 @@
     </div>
   </div>
 
+  <!-- Add or Edit Order Modal -->
   <div v-if="isModalVisible" class="modal-backdrop" @click="closeModal">
     <div class="modal" @click.stop>
       <div class="modal-content">
@@ -118,9 +119,10 @@
           type="text"
           placeholder="Enter customer name"
           maxlength="20"
+          @input="validateField('customer')"
+          @blur="validateField('customer')"
         />
-        <p class="error" v-if="this.customerError = modalOrder.customer.trim() === ''">Customer name is required.</p>
-        <p class="error" v-if="modalOrder.customer.length > 20">Customer name exceeds the maximum limit (20 characters).</p>
+        <p v-if="customerError" class="error">{{ customerError }}</p>
 
         <label for="date">Date:</label>
         <input
@@ -128,11 +130,13 @@
           id="date"
           type="date"
           placeholder="Enter date"
+          @input="validateField('date')"
+          @blur="validateField('date')"
         />
-        <p class="error" v-if="this.dateError = modalOrder.date.trim() === ''">Date is required.</p>
+        <p v-if="dateError" class="error">{{ dateError }}</p>
 
         <label for="status">Status:</label>
-        <select v-model="modalOrder.status" id="status">
+        <select v-model="modalOrder.status" id="status" @input="validateField('status')" @blur="validateField('status')">
           <option value="">Select Status</option>
           <option value="Pending">Pending</option>
           <option value="Shipped">Shipped</option>
@@ -140,7 +144,7 @@
           <option value="Cancelled">Cancelled</option>
           <option value="Processing">Processing</option>
         </select>
-        <p class="error" v-if="this.statusError = modalOrder.status.trim() === ''">Status is required.</p>
+        <p v-if="statusError" class="error">{{ statusError }}</p>
 
         <label for="total">Total:</label>
         <input
@@ -148,11 +152,13 @@
           id="total"
           type="number"
           placeholder="Enter total"
+          @input="validateField('total')"
+          @blur="validateField('total')"
         />
-        <p class="error" v-if="this.totalError = this.modalOrder.total <= 0 || isNaN(this.modalOrder.total)">Please enter a valid total</p>
+        <p v-if="totalError" class="error">{{ totalError }}</p>
 
         <label for="paymentMethod">Payment Method:</label>
-        <select v-model="modalOrder.paymentMethod" id="paymentMethod">
+        <select v-model="modalOrder.paymentMethod" id="paymentMethod" @input="validateField('paymentMethod')" @blur="validateField('paymentMethod')">
           <option value="">Select Payment Method</option>
           <option value="Down Payment">Down Payment</option>
           <option value="Credit Card">Credit Card</option>
@@ -161,7 +167,7 @@
           <option value="Debit Card">Debit Card</option>
           <option value="Cash">Cash</option>
         </select>
-        <p class="error" v-if="this.paymentError = modalOrder.paymentMethod.trim() === ''">Payment Method is required.</p>
+        <p v-if="paymentError" class="error">{{ paymentError }}</p>
 
         <div class="modal-buttons btn-gap">
           <button @click="saveOrder" :disabled="hasValidationErrors">Save</button>
@@ -308,6 +314,11 @@ export default {
         total: 0,
         paymentMethod: "",
       },
+      showCustomerError: false,
+      showDateError: false,
+      showStatusError: false,
+      showTotalError: false,
+      showPaymentError: false,
       customerError: '',
       dateError: '',
       statusError: '',
@@ -317,13 +328,15 @@ export default {
   },
   computed: {
     hasValidationErrors() {
-      return !this.modalOrder.customer ||
-      this.modalOrder.customer.length === 0 ||
-      this.modalOrder.date.length === 0 ||
-      this.modalOrder.status.length === 0 ||
-      this.modalOrder.total <= 0 ||
-      isNaN(this.modalOrder.total) ||
-      this.modalOrder.paymentMethod.length === 0;
+      return (
+        !this.modalOrder.customer ||
+        this.modalOrder.customer.length === 0 ||
+        this.modalOrder.date.length === 0 ||
+        this.modalOrder.status.length === 0 ||
+        this.modalOrder.total <= 0 ||
+        isNaN(this.modalOrder.total) ||
+        this.modalOrder.paymentMethod.length === 0
+      );
     },
     totalPages() {
     return Math.ceil(this.filteredOrders.length / this.itemsPerPage);
@@ -383,7 +396,8 @@ export default {
       }
     },
     formatPrice(value) {
-      return `₱${value.toLocaleString("en-US")}`;
+      if (typeof value !== 'number') return '₱0';
+      return `₱${value.toLocaleString('en-US')}`;
     },
     viewOrder(order) {
       this.selectedOrder = order;
@@ -419,20 +433,82 @@ export default {
       this.modalTitle = "Edit Order";
       this.modalOrder = { ...order };
       this.isModalVisible = true;
+      this.resetErrorFlags();
     },
     saveOrder() {
-      if (this.modalOrder.id) {
-        const index = this.orders.findIndex((order) => order.id === this.modalOrder.id);
-        if (index !== -1) {
-          this.orders.splice(index, 1, { ...this.modalOrder });
-        }
+      this.validateField('customer');
+      this.validateField('date');
+      this.validateField('status');
+      this.validateField('total');
+      this.validateField('paymentMethod');
+
+      if (this.showCustomerError || this.showDateError || this.showStatusError || this.showTotalError || this.showPaymentError) {
+        return;
+      }
+
+      const index = this.orders.findIndex((order) => order.id === this.modalOrder.id);
+      if (index !== -1) {
+        this.orders.splice(index, 1, { ...this.modalOrder });
       } else {
         const newId = this.orders.length
           ? Math.max(...this.orders.map((order) => order.id)) + 1
           : 1;
         this.orders.push({ ...this.modalOrder, id: newId });
       }
-      this.closeModal();
+      this.closeModal()
+    },
+    resetErrorFlags() {
+      this.showCustomerError = false;
+      this.showDateError = false;
+      this.showStatusError = false;
+      this.showTotalError = false;
+      this.showPaymentError = false;
+    },
+    validateField(field) {
+      if (field === 'customer') {
+        if (!this.modalOrder.customer) {
+          this.showCustomerError = true;
+          this.customerError = 'Customer name is required.';
+        } else if (this.modalOrder.customer.length > 20) {
+          this.showCustomerError = true;
+          this.customerError = 'Customer name exceeds the maximum limit (20 characters).';
+        } else {
+          this.showCustomerError = false;
+          this.customerError = '';
+        }
+      } else if (field === 'date') {
+        if (!this.modalOrder.date) {
+          this.showDateError = true;
+          this.dateError = 'Date is required.';
+        } else {
+          this.showDateError = false;
+          this.dateError = '';
+        }
+      } else if (field === 'status') {
+        if (!this.modalOrder.status) {
+          this.showStatusError = true;
+          this.statusError = 'Status is required.';
+        } else {
+          this.showStatusError = false;
+          this.statusError = '';
+        }
+      } else if (field === 'total') {
+        if (!this.modalOrder.total || this.modalOrder.total <= 0) {
+          this.showTotalError = true;
+          this.totalError = 'Please enter a valid total.';
+        } else {
+          this.showTotalError = false;
+          this.totalError = '';
+        }
+      } else if (field === 'paymentMethod') {
+        if (!this.modalOrder.paymentMethod) {
+          this.showPaymentError = true;
+          this.paymentError = 'Payment Method is required.';
+        } else {
+          this.showPaymentError = false;
+          this.paymentError = '';
+        }
+      }
     },
     closeModal() {
       this.isModalVisible = false;
@@ -444,6 +520,7 @@ export default {
         total: 0,
         paymentMethod: "",
       };
+      this.resetErrorFlags();
     },
     markAsChecked(order) {
       this.checkedOrder = order;

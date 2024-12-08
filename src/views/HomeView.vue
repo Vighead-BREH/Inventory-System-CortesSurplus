@@ -9,6 +9,7 @@ import MaterialCharts from "@/components/MaterialsChart.vue";
 
 const isSidebarVisible = ref(false);
 const totalSales = ref(0);
+const totalSoldCount = ref(0);
 
 function toggleSidebar() {
   isSidebarVisible.value = !isSidebarVisible.value;
@@ -16,6 +17,10 @@ function toggleSidebar() {
 
 function updateTotalSales(amount) {
   totalSales.value += amount;
+}
+
+function updateTotalSoldCount(count) {
+  totalSoldCount.value += count;
 }
 
 </script>
@@ -33,14 +38,14 @@ function updateTotalSales(amount) {
           <div class="sales-content">
             <h1>Sales Chart</h1>
             <div class="salesChart">
-              <SalesChart />
+              <SalesChart  :total-sold-count="totalSoldCount" />
             </div>
           </div>
           <!-- Car Table -->
           <div class="table-content-container">
             <h1>Market-Ready Vehicles</h1>
             <div class="table-content">
-              <CarTable @car-sold="updateTotalSales" />
+              <CarTable @car-sold="updateTotalSales" @car-sold-count="updateTotalSoldCount" />
             </div>
             <!-- Total Sales and Feedback Cards -->
             <div class="total-sales-container">

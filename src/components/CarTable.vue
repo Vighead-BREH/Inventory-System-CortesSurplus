@@ -62,38 +62,48 @@
     <button @click="openAddCarModal" style="margin: 5px 0 0 0; color: #007bff;"><i class="fa-solid fa-plus"></i></button>
   </div>
 
-  <!-- Add Car Modal -->
+  <!-- Add or Edit Car Modal -->
   <div v-if="isModalVisible" class="modal-backdrop" @click="closeModal">
     <div class="modal" @click.stop>
       <div class="modal-content">
         <h2>{{ modalTitle }}</h2>
-        <label for="unitName">Unit Name:</label>
-        <input
-          v-model="modalCar.unitName"
-          id="unitName"
-          type="text"
-          placeholder="Enter unit name"
-          maxlength="20"
-        />
-        <p v-if="this.unitNameError = this.modalCar.unitName.trim() === ''" class="error">Unit Name is required.</p>
-        <p v-if="this.modalCar.unitName.length > 20" class="error">Unit Name is exceeding the limit.</p>
-        <label for="quantity">Quantity:</label>
-        <input
-          v-model="modalCar.quantity"
-          id="quantity"
-          type="number"
-          placeholder="Enter quantity"
-        />
-        <p v-if="this.quantityError = this.modalCar.quantity <= 0 || isNaN(this.modalCar.quantity)" class="error">Please enter a valid quantity</p>
 
-        <label for="price">Price:</label>
-        <input
-          v-model="modalCar.price"
-          id="price"
-          type="number"
-          placeholder="Enter price"
-        />
-        <p v-if="this.priceError = this.modalCar.price <= 0 || isNaN(this.modalCar.price)" class="error">Please enter a valid price</p>
+          <!-- Unit Name -->
+          <label for="unitName">Unit Name:</label>
+          <input
+            v-model="modalCar.unitName"
+            id="unitName"
+            type="text"
+            placeholder="Enter unit name"
+            maxlength="20"
+            @input="validateField('unitName')"
+            @blur="validateField('unitName')"
+          />
+          <p v-if="showUnitNameError" class="error">{{ unitNameError }}</p>
+
+          <!-- Quantity -->
+          <label for="quantity">Quantity:</label>
+          <input
+            v-model="modalCar.quantity"
+            id="quantity"
+            type="number"
+            placeholder="Enter quantity"
+            @input="validateField('quantity')"
+            @blur="validateField('quantity')"
+          />
+          <p v-if="showQuantityError" class="error">{{ quantityError }}</p>
+
+          <!-- Price -->
+          <label for="price">Price:</label>
+          <input
+            v-model="modalCar.price"
+            id="price"
+            type="number"
+            placeholder="Enter price"
+            @input="validateField('price')"
+            @blur="validateField('price')"
+          />
+          <p v-if="showPriceError" class="error">{{ priceError }}</p>
 
         <div class="modal-buttons btn-gap">
           <button @click="saveCar" :disabled="hasValidationErrors">Save</button>
@@ -152,7 +162,7 @@
 <script>
 export default {
   name: 'CarTable',
-  emits: ['car-sold'],
+  emits: ['car-sold', 'car-sold-count'],
   data() {
     return {
       cars: [
@@ -189,130 +199,185 @@ export default {
         soldQuantity: 0,
         price: 0,
       },
+      showUnitNameError: false,
+      showQuantityError: false,
+      showPriceError: false,
       unitNameError: '',
       quantityError: '',
       priceError: '',
-    }
+    };
   },
   computed: {
     hasValidationErrors() {
-      return !this.modalCar.unitName ||
-      this.modalCar.unitName.length === 0 ||
-      this.modalCar.quantity <= 0 ||
-      isNaN(this.modalCar.quantity) ||
-      this.modalCar.price <= 0 ||
-      isNaN(this.modalCar.price) ||
-      this.modalCar.unitName.length > 20;
+      return (
+        !this.modalCar.unitName ||
+        this.modalCar.unitName.length === 0 ||
+        this.modalCar.quantity <= 0 ||
+        isNaN(this.modalCar.quantity) ||
+        this.modalCar.price <= 0 ||
+        isNaN(this.modalCar.price) ||
+        this.modalCar.unitName.length > 20
+      );
     },
     isSoldCarValid() {
       return this.soldCar.soldQuantity > 0 && this.soldCar.soldQuantity <= this.soldCar.quantity;
     },
     totalPages() {
-      return Math.ceil(this.cars.length / this.itemsPerPage)
+      return Math.ceil(this.cars.length / this.itemsPerPage);
     },
     sortedCars() {
       return [...this.cars].sort((a, b) => {
-        const factor = this.sortOrder === 'asc' ? 1 : -1
+        const factor = this.sortOrder === 'asc' ? 1 : -1;
         if (typeof a[this.sortBy] === 'string') {
-          return factor * a[this.sortBy].localeCompare(b[this.sortBy])
+          return factor * a[this.sortBy].localeCompare(b[this.sortBy]);
         } else {
-          return factor * (a[this.sortBy] - b[this.sortBy])
+          return factor * (a[this.sortBy] - b[this.sortBy]);
         }
-      })
+      });
     },
     paginatedSortedCars() {
-      const startIndex = (this.currentPage - 1) * this.itemsPerPage
-      return this.sortedCars.slice(startIndex, startIndex + this.itemsPerPage)
+      const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+      return this.sortedCars.slice(startIndex, startIndex + this.itemsPerPage);
     },
   },
   methods: {
     changeSort(column) {
       if (this.sortBy === column) {
-        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc'
+        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
       } else {
-        this.sortBy = column
-        this.sortOrder = 'asc'
+        this.sortBy = column;
+        this.sortOrder = 'asc';
       }
     },
     getSortIcon(column) {
       if (this.sortBy === column) {
-        return this.sortOrder === 'asc' ? '⬆' : '⬇'
+        return this.sortOrder === 'asc' ? '⬆' : '⬇';
       }
-      return '⬍'
+      return '⬍';
     },
     formatPrice(value) {
-      if (typeof value !== 'number') return '₱0'
-      return `₱${value.toLocaleString('en-US')}`
+      if (typeof value !== 'number') return '₱0';
+      return `₱${value.toLocaleString('en-US')}`;
     },
     nextPage() {
       if (this.currentPage < this.totalPages) {
-        this.currentPage++
+        this.currentPage++;
       }
     },
     prevPage() {
       if (this.currentPage > 1) {
-        this.currentPage--
+        this.currentPage--;
       }
     },
     openAddCarModal() {
-      this.modalTitle = 'Add New Car'
-      this.modalCar = { id: null, unitName: '', quantity: 0, price: 0 }
-      this.isModalVisible = true
+      this.modalTitle = 'Add New Car';
+      this.modalCar = { id: null, unitName: '', quantity: 0, price: 0 };
+      this.isModalVisible = true;
+      this.resetErrorFlags();
     },
     editCar(car) {
-      this.modalTitle = 'Edit Car'
-      this.modalCar = { ...car }
-      this.isModalVisible = true
+      this.modalTitle = 'Edit Car';
+      this.modalCar = { ...car };
+      this.isModalVisible = true;
+      this.resetErrorFlags();
     },
     closeModal() {
-      this.isModalVisible = false
-      this.modalCar = { id: null, unitName: '', quantity: 0, price: 0 }
+      this.isModalVisible = false;
+      this.modalCar = { id: null,
+        unitName: '',
+        quantity: 0,
+        price: 0
+      };
+      this.resetErrorFlags();
     },
     deleteCar(id) {
-      this.cars = this.cars.filter((car) => car.id !== id)
-      this.closeDeleteModal()
+      this.cars = this.cars.filter((car) => car.id !== id);
+      this.closeDeleteModal();
     },
     openDeleteCarModal(car) {
-      this.carToDelete = { ...car }
-      this.isDeleteModalVisible = true
+      this.carToDelete = { ...car };
+      this.isDeleteModalVisible = true;
     },
     closeDeleteModal() {
-      this.isDeleteModalVisible = false
+      this.isDeleteModalVisible = false;
     },
     openSoldCarModal(car) {
-      this.soldCar = { ...car, soldQuantity: 0 }
-      this.isSoldModalVisible = true
+      this.soldCar = { ...car, soldQuantity: 0 };
+      this.isSoldModalVisible = true;
     },
     closeSoldModal() {
-      this.isSoldModalVisible = false
+      this.isSoldModalVisible = false;
     },
     markAsSold() {
       if (this.soldCar.soldQuantity > 0) {
         const car = this.cars.find((c) => c.id === this.soldCar.id);
         if (car) {
           const totalPrice = this.soldCar.soldQuantity * car.price;
+          const soldCount = this.soldCar.soldQuantity;
           if (car.quantity >= this.soldCar.soldQuantity) {
             car.quantity -= this.soldCar.soldQuantity;
-            this.$emit("car-sold", totalPrice);
+            this.$emit('car-sold', totalPrice);
+            this.$emit('car-sold-count', soldCount);
             this.closeSoldModal();
           }
         }
       }
     },
     saveCar() {
-      if (!this.hasValidationErrors || this.unitNameError) {
-        const index = this.cars.findIndex((car) => car.id === this.modalCar.id);
-        if (index !== -1) {
-          this.cars.splice(index, 1, { ...this.modalCar });
+      this.validateField('unitName');
+      this.validateField('quantity');
+      this.validateField('price');
+
+      if (this.showUnitNameError || this.showQuantityError || this.showPriceError) {
+        return;
+      }
+
+      const index = this.cars.findIndex((car) => car.id === this.modalCar.id);
+      if (index !== -1) {
+        this.cars.splice(index, 1, { ...this.modalCar });
+      } else {
+        const newId = Math.max(...this.cars.map((car) => car.id)) + 1;
+        this.cars.push({ ...this.modalCar, id: newId });
+      }
+      this.closeModal();
+    },
+    resetErrorFlags() {
+      this.showUnitNameError = false;
+      this.showQuantityError = false;
+      this.showPriceError = false;
+    },
+    validateField(field) {
+      if (field === 'unitName') {
+        if (!this.modalCar.unitName) {
+          this.showUnitNameError = true;
+          this.unitNameError = 'Unit name is required.';
+        } else if (this.modalCar.unitName.length > 20) {
+          this.showUnitNameError = true;
+          this.unitNameError = 'Unit name must be 20 characters or less.';
         } else {
-          const newId = Math.max(...this.cars.map((car) => car.id)) + 1;
-          this.cars.push({ ...this.modalCar, id: newId });
+          this.showUnitNameError = false;
+          this.unitNameError = '';
         }
-        this.closeModal();
+      } else if (field === 'quantity') {
+        if (!this.modalCar.quantity || this.modalCar.quantity <= 0) {
+          this.showQuantityError = true;
+          this.quantityError = 'Input a valid quantity number.';
+        } else {
+          this.showQuantityError = false;
+          this.quantityError = '';
+        }
+      } else if (field === 'price') {
+        if (!this.modalCar.price || this.modalCar.price <= 0) {
+          this.showPriceError = true;
+          this.priceError = 'Input a valid price number.';
+        } else {
+          this.showPriceError = false;
+          this.priceError = '';
+        }
       }
     },
   },
-}
+};
 </script>
 
 <style scoped>
