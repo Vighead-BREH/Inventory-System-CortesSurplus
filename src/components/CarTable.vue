@@ -1,10 +1,21 @@
 <template>
   <div class="table-container">
-    <div class="pagination-controls">
-      <button :disabled="currentPage <= 1" @click="prevPage">Prev</button>
-      <span>Page {{ currentPage }} / {{ totalPages }}</span>
-      <button :disabled="currentPage >= totalPages" @click="nextPage">Next</button>
+    <div class="table-top-container">
+      <div class="search-container">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search orders..."
+          class="search-input"
+        />
+      </div>
+      <div class="pagination-controls">
+        <button :disabled="currentPage <= 1" @click="prevPage">Prev</button>
+        <span>Page {{ currentPage }} / {{ totalPages }}</span>
+        <button :disabled="currentPage >= totalPages" @click="nextPage">Next</button>
+      </div>
     </div>
+
     <table>
       <thead>
         <tr>
@@ -131,6 +142,17 @@
         />
         <p v-if="soldCar.soldQuantity > soldCar.quantity" class="error">Not enough stock.</p>
         <p v-if="soldCar.soldQuantity < 0" class="error">Please input a valid number.</p>
+        <label for="customer">Customer:</label>
+        <input
+          v-model="soldCar.customer"
+          id="customer"
+          type="text"
+          placeholder="Enter customer name"
+          maxlength="20"
+          @input="validateField('customer')"
+          @blur="validateField('customer')"
+        />
+        <p v-if="showCustomerError" class="error">{{ customerError }}</p>
         <p>Price per unit: {{ formatPrice(soldCar.price) }}</p>
         <p v-if="soldCar.soldQuantity > 0">
           Total Price: {{ formatPrice(soldCar.soldQuantity * soldCar.price) }}
@@ -166,7 +188,7 @@ export default {
   data() {
     return {
       cars: [
-        { id: 1, unitName: 'Toyota Corolla', quantity: 5, price: 1500000 },
+        { id: 1, unitName: 'Toyota Corolla', customer: 'Marc Ejay', quantity: 5, price: 1500000 },
         { id: 2, unitName: 'Honda Accord', quantity: 3, price: 1800000 },
         { id: 3, unitName: 'Ford Ranger', quantity: 7, price: 2500000 },
         { id: 4, unitName: 'Chevrolet Spark', quantity: 2, price: 900000 },
@@ -179,6 +201,7 @@ export default {
       ],
       currentPage: 1,
       itemsPerPage: 5,
+      searchQuery: "",
       sortBy: '',
       sortOrder: 'asc',
       isModalVisible: false,
@@ -200,14 +223,24 @@ export default {
         price: 0,
       },
       showUnitNameError: false,
+      showCustomerError: false,
       showQuantityError: false,
       showPriceError: false,
       unitNameError: '',
+      customerError: '',
       quantityError: '',
       priceError: '',
     };
   },
   computed: {
+    filteredCars() {
+      return this.cars.filter((car) => {
+        return car.unitName.toLowerCase().includes(this.searchQuery.toLowerCase());
+      });
+    },
+    totalPages() {
+      return Math.ceil(this.filteredCars.length / this.itemsPerPage);
+    },
     hasValidationErrors() {
       return (
         !this.modalCar.unitName ||
@@ -222,11 +255,8 @@ export default {
     isSoldCarValid() {
       return this.soldCar.soldQuantity > 0 && this.soldCar.soldQuantity <= this.soldCar.quantity;
     },
-    totalPages() {
-      return Math.ceil(this.cars.length / this.itemsPerPage);
-    },
     sortedCars() {
-      return [...this.cars].sort((a, b) => {
+      return [...this.filteredCars].sort((a, b) => {
         const factor = this.sortOrder === 'asc' ? 1 : -1;
         if (typeof a[this.sortBy] === 'string') {
           return factor * a[this.sortBy].localeCompare(b[this.sortBy]);
@@ -347,35 +377,58 @@ export default {
       this.showPriceError = false;
     },
     validateField(field) {
-      if (field === 'unitName') {
-        if (!this.modalCar.unitName) {
-          this.showUnitNameError = true;
-          this.unitNameError = 'Unit name is required.';
-        } else if (this.modalCar.unitName.length > 20) {
-          this.showUnitNameError = true;
-          this.unitNameError = 'Unit name must be 20 characters or less.';
-        } else {
-          this.showUnitNameError = false;
-          this.unitNameError = '';
-        }
-      } else if (field === 'quantity') {
-        if (!this.modalCar.quantity || this.modalCar.quantity <= 0) {
-          this.showQuantityError = true;
-          this.quantityError = 'Input a valid quantity number.';
-        } else {
-          this.showQuantityError = false;
-          this.quantityError = '';
-        }
-      } else if (field === 'price') {
-        if (!this.modalCar.price || this.modalCar.price <= 0) {
-          this.showPriceError = true;
-          this.priceError = 'Input a valid price number.';
-        } else {
-          this.showPriceError = false;
-          this.priceError = '';
-        }
+      const validationRules = {
+        unitName: {
+          validate: () => {
+            if (!this.modalCar.unitName) {
+              return 'Unit name is required.';
+            } else if (this.modalCar.unitName.length > 20) {
+              return 'Unit name must be 20 characters or less.';
+            }
+            return '';
+          },
+          errorKey: 'unitNameError',
+          showErrorKey: 'showUnitNameError',
+        },
+        customer: {
+          validate: () => {
+            if (!this.soldCar.customer || this.soldCar.customer.trim().length === 0) {
+              return 'Customer name is required.';
+            }
+            return '';
+          },
+          errorKey: 'customerError',
+          showErrorKey: 'showCustomerError',
+        },
+        quantity: {
+          validate: () => {
+            if (!this.modalCar.quantity || this.modalCar.quantity <= 0) {
+              return 'Input a valid quantity number.';
+            }
+            return '';
+          },
+          errorKey: 'quantityError',
+          showErrorKey: 'showQuantityError',
+        },
+        price: {
+          validate: () => {
+            if (!this.modalCar.price || this.modalCar.price <= 0) {
+              return 'Input a valid price number.';
+            }
+            return '';
+          },
+          errorKey: 'priceError',
+          showErrorKey: 'showPriceError',
+        },
+      };
+
+      const rule = validationRules[field];
+      if (rule) {
+        const errorMessage = rule.validate();
+        this[rule.errorKey] = errorMessage;
+        this[rule.showErrorKey] = !!errorMessage;
       }
-    },
+    }
   },
 };
 </script>
@@ -415,10 +468,6 @@ th {
   cursor: pointer;
 }
 
-.btn-gap button:disabled {
-  cursor: not-allowed;
-}
-
 button {
   padding: 5px 10px;
   cursor: pointer;
@@ -433,8 +482,11 @@ button:hover {
 
 .btn-gap {
   display: flex;
-  justify-content: space-around;
   gap: 5px;
+}
+
+.btn-gap button:disabled {
+  cursor: not-allowed;
 }
 
 h2 {
@@ -552,6 +604,25 @@ h2 {
   color: #fff;
 }
 
+.table-top-container {
+  display: flex;
+  justify-content: space-between;
+}
+
+.search-container {
+  margin-bottom: 10px;
+  text-align: right;
+}
+
+.search-input {
+  padding: 2px 10px;
+  width: 200px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -564,10 +635,15 @@ h2 {
 }
 
 @media (max-width: 1700px) {
+  .table-top-container {
+    min-width: 490px;
+    width: 100%;
+  }
+
   table {
+    min-width: 490px;
     width: 100%;
     font-size: 12px;
-    height: 250px;
   }
 
   th,
@@ -580,13 +656,17 @@ h2 {
     padding: 4px 8px;
   }
 
-  .pagination-controls{
-    min-width: 361px;
+  .pagination-controls span {
+    font-size: 12px;
   }
 
   .pagination-controls button {
     font-size: 10px;
     padding: 5px;
+  }
+
+  .search-input {
+    padding: 0 10px;
   }
 }
 </style>

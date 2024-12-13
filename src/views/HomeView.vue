@@ -1,28 +1,43 @@
 <script setup>
-import { ref } from "vue";
-import NavHeader from "../components/NavHeader.vue";
-import NavSideBar from "../components/NavSideBar.vue";
-import SalesChart from "@/components/SalesChart.vue";
-import CarTable from "@/components/CarTable.vue";
-import OrderTable from "@/components/OrderTable.vue";
-import MaterialCharts from "@/components/MaterialsChart.vue";
+import { ref } from 'vue'
+import NavHeader from '../components/NavHeader.vue'
+import NavSideBar from '../components/NavSideBar.vue'
+import SalesChart from '@/components/SalesChart.vue'
+import CarTable from '@/components/CarTable.vue'
+import OrderTable from '@/components/OrderTable.vue'
+import MaterialCharts from '@/components/MaterialsChart.vue'
+import { useMaterialsStore } from '@/stores/materialsStore'
 
-const isSidebarVisible = ref(false);
-const totalSales = ref(0);
-const totalSoldCount = ref(0);
+const isSidebarVisible = ref(false)
+const totalSales = ref(0)
+const totalSoldCount = ref(0)
+const totalOrders = ref(0)
 
 function toggleSidebar() {
-  isSidebarVisible.value = !isSidebarVisible.value;
+  isSidebarVisible.value = !isSidebarVisible.value
+}
+
+function logStoreState() {
+  const store = useMaterialsStore()
+  console.log('Total Stock:', store.getTotalStock)
+  console.log('Stock Used:', store.getStockUsed)
 }
 
 function updateTotalSales(amount) {
-  totalSales.value += amount;
+  totalSales.value += amount
 }
 
 function updateTotalSoldCount(count) {
-  totalSoldCount.value += count;
+  totalSoldCount.value += count
 }
 
+function updateTotalOrders(count) {
+  totalOrders.value = count
+}
+
+function formatPrice(amount) {
+  return `₱${amount.toLocaleString('en-US')}`
+}
 </script>
 
 <template>
@@ -38,7 +53,8 @@ function updateTotalSoldCount(count) {
           <div class="sales-content">
             <h1>Sales Chart</h1>
             <div class="salesChart">
-              <SalesChart  :total-sold-count="totalSoldCount" />
+              <SalesChart :total-sold-count="totalSoldCount" />
+              <button @click="logStoreState">Log Store State</button>
             </div>
           </div>
           <!-- Car Table -->
@@ -51,11 +67,15 @@ function updateTotalSoldCount(count) {
             <div class="total-sales-container">
               <div class="total-sales-card">
                 <h2><i class="fas fa-peso-sign"></i> Monthly Performance</h2>
-                <p>Total Sales: <span class="highlight">₱{{ totalSales.toLocaleString('en-US') }}</span></p>
+                <p>
+                  Total Sales: <span class="highlight">{{ formatPrice(totalSales) }}</span>
+                </p>
               </div>
-              <div class="total-feedback-card">
-                <h2><i class="fas fa-comments"></i> Feedback</h2>
-                <p>Customer Feedbacks: <span class="highlight">92 Positive</span></p>
+              <div class="total-order-card">
+                <h2><i class="fas fa-shopping-cart"></i> Orders</h2>
+                <p>
+                  Total Orders: <span class="highlight">{{ totalOrders }}</span>
+                </p>
               </div>
             </div>
           </div>
@@ -65,12 +85,16 @@ function updateTotalSoldCount(count) {
           <div class="table-content-container">
             <h1>Orders</h1>
             <div class="table-content">
-              <OrderTable @orderChecked="updateTotalSales" />
+              <OrderTable
+                @orderChecked="updateTotalSales"
+                @orderQuantity="updateTotalSoldCount"
+                @orderCount="updateTotalOrders"
+              />
             </div>
           </div>
           <div class="material-content">
             <!-- Material Charts -->
-            <h1>Materials</h1>
+            <h1>Materials Chart</h1>
             <div class="materialsChart">
               <MaterialCharts />
             </div>
@@ -82,7 +106,6 @@ function updateTotalSoldCount(count) {
 </template>
 
 <style scoped>
-
 h1 {
   color: #fff;
 }
@@ -163,7 +186,7 @@ section.content {
 }
 
 .total-sales-card,
-.total-feedback-card {
+.total-order-card {
   flex: 1 1 45%;
   background-color: #333;
   border-radius: 12px;
@@ -174,7 +197,7 @@ section.content {
 }
 
 .total-sales-card h2,
-.total-feedback-card h2 {
+.total-order-card h2 {
   font-size: 1.25rem;
   margin-bottom: 10px;
   display: flex;
@@ -184,7 +207,7 @@ section.content {
 }
 
 .total-sales-card p,
-.total-feedback-card p {
+.total-order-card p {
   font-size: 1rem;
   margin: 5px 0;
 }
@@ -219,7 +242,8 @@ section.content {
     align-items: center;
   }
 
-  .total-sales-card, .total-feedback-card {
+  .total-sales-card,
+  .total-order-card {
     width: 100%;
   }
 }

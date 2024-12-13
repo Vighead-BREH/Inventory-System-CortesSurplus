@@ -43,7 +43,7 @@ function toggleSidebar() {
           <div class="table-content-container">
             <h1>Sales Reports</h1>
             <div class="table-content">
-              <SalesReports />
+              <SalesReports  />
             </div>
           </div>
         </div>

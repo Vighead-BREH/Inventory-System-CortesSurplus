@@ -1,30 +1,21 @@
 <script setup>
-  import '@fortawesome/fontawesome-free/css/all.css';
-  import '@fortawesome/fontawesome-free/js/all.js';
-
+import '@fortawesome/fontawesome-free/css/all.css'
+import '@fortawesome/fontawesome-free/js/all.js'
 </script>
 <template>
   <div :class="['sidebar', { visible: visible }]">
     <ul>
       <li>
-        <router-link to="/">
-          <i class="fas fa-home"></i> Home
-        </router-link>
+        <router-link to="/"> <i class="fas fa-home"></i> Home </router-link>
       </li>
       <li>
-        <router-link to="/sales">
-          <i class="fas fa-chart-line"></i> Sales
-        </router-link>
+        <router-link to="/sales"> <i class="fas fa-chart-line"></i> Sales </router-link>
       </li>
       <li>
-        <router-link to="/inventory">
-          <i class="fas fa-box"></i> Inventory
-        </router-link>
+        <router-link to="/inventory"> <i class="fas fa-box"></i> Inventory </router-link>
       </li>
       <li>
-        <a href="#">
-          <i class="fas fa-address-book"></i> Contacts
-        </a>
+        <a href="#"> <i class="fas fa-address-book"></i> Contacts </a>
       </li>
     </ul>
   </div>
@@ -34,19 +25,19 @@
 
 <script>
 export default {
-  name: "NavSideBar",
+  name: 'NavSideBar',
   props: {
     visible: {
       type: Boolean,
-      required: true
-    }
+      required: true,
+    },
   },
   methods: {
     closeSidebar() {
-      this.$emit('toggle-sidebar');
-    }
-  }
-};
+      this.$emit('toggle-sidebar')
+    },
+  },
+}
 </script>
 
 <style scoped>

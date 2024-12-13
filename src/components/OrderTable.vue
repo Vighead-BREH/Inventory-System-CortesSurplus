@@ -45,7 +45,7 @@
           </th>
           <th @click="changeSort('total')">
             <div class="th-gap">
-              <span class="nowrap">Total</span>
+              <span class="nowrap">Deposit</span>
               <span class="sort-icon">{{ getSortIcon('total') }}</span>
             </div>
           </th>
@@ -89,16 +89,24 @@
     <button @click="openAddOrderModal" style="margin: 5px 0 0 0; color: #007bff;"><i class="fa-solid fa-plus"></i></button>
   </div>
 
+  <!-- Order Details -->
   <div v-if="viewModalVisible" class="modal-backdrop" @click="closeViewModal">
     <div class="modal" @click.stop>
       <div class="modal-content">
         <h2>Order Details</h2>
-        <p><strong>ID:</strong> {{ selectedOrder.id }}</p>
-        <p><strong>Customer:</strong> {{ selectedOrder.customer }}</p>
-        <p><strong>Date:</strong> {{ selectedOrder.date }}</p>
-        <p><strong>Status:</strong> {{ selectedOrder.status }}</p>
-        <p><strong>Total:</strong> {{ formatPrice(selectedOrder.total).replace('₱', '') }}</p>
-        <p><strong>Payment Method:</strong> {{ selectedOrder.paymentMethod }}</p>
+        <p><strong>Customer:</strong> {{ selectedOrder.customer }} </p>
+        <p><strong>Unit Name:</strong> {{ selectedOrder.unitName }} </p>
+        <p><strong>Quantity:</strong> {{ selectedOrder.quantity }} </p>
+        <p><strong>Accessories: </strong>{{ accessoriesNone }} </p>
+        <ul>
+          <li v-for="(accessory, index) in selectedOrder.selectedAccessories" :key="index">
+            {{ accessory }}
+          </li>
+        </ul>
+        <p><strong>Deposit Amount:</strong> {{ formatPrice(selectedOrder.total) }} </p>
+        <p><strong>Unit Price:</strong> {{ formatPrice(selectedOrder.unitPrice) }} </p>
+        <p><strong>Total Add Ons:</strong> {{ formatPrice(selectedOrder.unitPriceAddOns) }} </p>
+        <p><strong>Total Price:</strong> {{ formatPrice(selectedOrder.totalPrice) }} </p>
         <div class="modal-buttons">
           <button @click="closeViewModal">Close</button>
         </div>
@@ -124,6 +132,43 @@
         />
         <p v-if="customerError" class="error">{{ customerError }}</p>
 
+        <label for="unitName">Unit Name:</label>
+        <input
+          v-model="modalOrder.unitName"
+          id="unitName"
+          type="text"
+          placeholder="Enter unit name"
+          maxlength="20"
+          @input="validateField('unitName')"
+          @blur="validateField('unitName')"
+          required
+        />
+        <p v-if="unitNameError" class="error">{{ unitNameError }}</p>
+
+        <label for="unitPrice">Unit Price:</label>
+        <input
+          v-model="modalOrder.unitPrice"
+          id="unitPrice"
+          type="number"
+          placeholder="Enter unit price"
+          @input="validateField('unitPrice')"
+          @blur="validateField('unitPrice')"
+          required
+        />
+        <p v-if="unitPriceError" class="error">{{ unitPriceError }}</p>
+
+        <label for="quantity">Quantity:</label>
+        <input
+          v-model="modalOrder.quantity"
+          id="quantity"
+          type="number"
+          placeholder="Enter quantity"
+          @input="validateField('quantity')"
+          @blur="validateField('quantity')"
+          required
+        />
+        <p v-if="quantityError" class="error">{{ quantityError }}</p>
+
         <label for="date">Date:</label>
         <input
           v-model="modalOrder.date"
@@ -136,7 +181,7 @@
         <p v-if="dateError" class="error">{{ dateError }}</p>
 
         <label for="status">Status:</label>
-        <select v-model="modalOrder.status" id="status" @input="validateField('status')" @blur="validateField('status')">
+        <select v-model="modalOrder.status" id="status" @change="validateField('status')" @blur="validateField('status')">
           <option value="">Select Status</option>
           <option value="Pending">Pending</option>
           <option value="Shipped">Shipped</option>
@@ -158,7 +203,7 @@
         <p v-if="totalError" class="error">{{ totalError }}</p>
 
         <label for="paymentMethod">Payment Method:</label>
-        <select v-model="modalOrder.paymentMethod" id="paymentMethod" @input="validateField('paymentMethod')" @blur="validateField('paymentMethod')">
+        <select v-model="modalOrder.paymentMethod" id="paymentMethod" @change="validateField('paymentMethod')" @blur="validateField('paymentMethod')">
           <option value="">Select Payment Method</option>
           <option value="Down Payment">Down Payment</option>
           <option value="Credit Card">Credit Card</option>
@@ -169,6 +214,10 @@
         </select>
         <p v-if="paymentError" class="error">{{ paymentError }}</p>
 
+        <div class="accessory-btn">
+          <button @click="openAdditionalAccessoriesModal">Add Accessories</button>
+        </div>
+
         <div class="modal-buttons btn-gap">
           <button @click="saveOrder" :disabled="hasValidationErrors">Save</button>
           <button @click="closeModal">Cancel</button>
@@ -177,6 +226,34 @@
     </div>
   </div>
 
+  <!-- Additional Accessories Modal -->
+  <div v-if="additionalAccessoriesModalVisible" class="modal-backdrop" @click="closeAdditionalAccessoriesModal">
+    <div class="modal" @click.stop>
+      <div class="accessories-modal-content">
+        <h2>Additional Accessories</h2>
+        <p>Please select the accessories you would like to add to your order.</p>
+
+        <div class="accessories-list">
+          <div v-for="(accessory, index) in accessories" :key="index" class="accessory-item">
+            <input
+              type="checkbox"
+              :id="'accessory-' + index"
+              :value="accessory.value"
+              v-model="selectedAccessories"
+            />
+            <label :for="'accessory-' + index">{{ accessory.text }}</label>
+          </div>
+        </div>
+        <p><strong>Total Add Ons:</strong> {{ totalAddOns.toLocaleString() }} </p>
+        <div class="modal-buttons btn-gap">
+          <button @click="confirmAdditionalAccessories">Confirm Selection</button>
+          <button @click="closeAdditionalAccessoriesModal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Modal -->
   <div v-if="deleteModalVisible" class="modal-backdrop" @click="closeDeleteModal">
     <div class="modal" @click.stop>
       <div class="modal-content">
@@ -189,6 +266,7 @@
     </div>
   </div>
 
+  <!-- Check Modal -->
   <div v-if="checkModalVisible" class="modal-backdrop" @click="closeCheckModal">
   <div class="modal" @click.stop>
     <div class="modal-content">
@@ -196,7 +274,7 @@
       <p><strong>ID:</strong> {{ checkedOrder.id }}</p>
       <p><strong>Customer:</strong> {{ checkedOrder.customer }}</p>
       <p><strong>Date:</strong> {{ checkedOrder.date }}</p>
-      <p><strong>Total:</strong> {{ formatPrice(checkedOrder.total).replace('₱', '') }}</p>
+      <p><strong>Total:</strong> {{ formatPrice(checkedOrder.total) }}</p>
       <p>This order is now marked as checked.</p>
       <div class="modal-buttons btn-gap">
         <button @click="closeCheckModal">Close</button>
@@ -209,7 +287,7 @@
 <script>
 export default {
   name: "OrderTable",
-  emits: ['orderChecked'],
+  emits: ['orderChecked', 'orderQuantity', 'orderCount'],
   data() {
     return {
       orders: [
@@ -218,94 +296,52 @@ export default {
           customer: "John Doe",
           date: "2024-11-01",
           status: "Pending",
-          total: 500,
+          total: 150000,
           paymentMethod: "Down Payment",
-        },
-        {
-          id: 2,
-          customer: "Jane Smith",
-          date: "2024-11-02",
-          status: "Shipped",
-          total: 200,
-          paymentMethod: "PayPal",
-        },
-        {
-          id: 3,
-          customer: "Alice Johnson",
-          date: "2024-11-05",
-          status: "Completed",
-          total: 1000,
-          paymentMethod: "Bank Transfer",
-        },
-        {
-          id: 4,
-          customer: "Bob Brown",
-          date: "2024-11-06",
-          status: "Cancelled",
-          total: 150,
-          paymentMethod: "Debit Card",
-        },
-        {
-          id: 5,
-          customer: "Eve Adams",
-          date: "2024-11-07",
-          status: "Pending",
-          total: 300,
-          paymentMethod: "Cash",
-        },
-        {
-          id: 6,
-          customer: "Charlie White",
-          date: "2024-11-08",
-          status: "Shipped",
-          total: 700,
-          paymentMethod: "PayPal",
-        },
-        {
-          id: 7,
-          customer: "Grace Green",
-          date: "2024-11-09",
-          status: "Processing",
-          total: 450,
-          paymentMethod: "Credit Card",
-        },
-        {
-          id: 8,
-          customer: "Hank Blue",
-          date: "2024-11-10",
-          status: "Completed",
-          total: 600,
-          paymentMethod: "Bank Transfer",
-        },
-        {
-          id: 9,
-          customer: "Ivy Red",
-          date: "2024-11-11",
-          status: "Cancelled",
-          total: 120,
-          paymentMethod: "Cash",
-        },
-        {
-          id: 10,
-          customer: "Jack Black",
-          date: "2024-11-12",
-          status: "Processing",
-          total: 800,
-          paymentMethod: "Debit Card",
+          unitName: "Toyota Camry",
+          quantity: 1,
+          selectedAccessories: [],
+          unitPrice: 150000,
+          unitPriceAddOns: 0,
+          totalPrice: 150000
         },
       ],
+      accessories: [
+        { value: 'sporty-bumper', text: 'Sporty bumper (P7,000)' },
+        { value: 'hood-chrome', text: 'Hood with chrome (P1,500)' },
+        { value: 'door-trim-pillar', text: 'Door trim and pillar (P3,000)' },
+        { value: 'chrome-side-mirror', text: 'Chrome side mirror with light (P1,400)' },
+        { value: 'fender-flare', text: 'Fender flare (P4,500)' },
+        { value: 'upgrade-15-inch-mags', text: 'Upgrade to 15 inches mags (P8,000)' },
+        { value: 'steel-bumper', text: 'Steel bumper (P4,000)' },
+        { value: 'back-step-board', text: 'Back step board (P3,500)' },
+        { value: 'headlight-garnish', text: 'Headlight garnish (P1,400)' },
+        { value: 'tail-light-garnish', text: 'Tail light garnish (P1,300)' },
+        { value: 'wiper-stainless', text: 'Wiper stainless (P600)' },
+        { value: 'gastank', text: 'Gastank (P450)' },
+        { value: 'back-wiper-cover', text: 'Back wiper cover (P750)' },
+        { value: 'side-body-trim', text: 'Side body trim (P1,300)' },
+        { value: 'third-brake-light', text: 'Third brake light (P650)' },
+        { value: 'ceiling', text: 'Ceiling (P1,500)' },
+        { value: 'checkered-stepboard', text: 'Checkered stepboard (P1,600)' },
+        { value: 'door-handle', text: 'Door handle (P1,300)' },
+        { value: 'led-headlight', text: 'LED headlight (P1,300)' }
+      ],
+      selectedAccessories: [],
       searchQuery: "",
       currentPage: 1,
       itemsPerPage: 5,
       sortBy: "",
       sortOrder: "asc",
       viewModalVisible: false,
+      additionalAccessoriesModalVisible: false,
       isModalVisible: false,
       deleteModalVisible: false,
       checkModalVisible: false,
       checkedOrder: null,
       selectedOrder: null,
       modalTitle: "",
+      accessoriesNone: "",
       modalOrder: {
         id: null,
         customer: "",
@@ -319,7 +355,13 @@ export default {
       showStatusError: false,
       showTotalError: false,
       showPaymentError: false,
+      showUnitNameError: false,
+      showUnitPriceError: false,
+      showQuantityError: false,
+      unitNameError: '',
       customerError: '',
+      unitPriceError: '',
+      quantityError: '',
       dateError: '',
       statusError: '',
       totalError: '',
@@ -330,6 +372,9 @@ export default {
     hasValidationErrors() {
       return (
         !this.modalOrder.customer ||
+        !this.modalOrder.unitName ||
+        this.modalOrder.unitPrice <= 0 ||
+        this.modalOrder.quantity <= 0 ||
         this.modalOrder.customer.length === 0 ||
         this.modalOrder.date.length === 0 ||
         this.modalOrder.status.length === 0 ||
@@ -338,11 +383,21 @@ export default {
         this.modalOrder.paymentMethod.length === 0
       );
     },
-    totalPages() {
+  totalPages() {
     return Math.ceil(this.filteredOrders.length / this.itemsPerPage);
   },
   filteredOrders() {
-    let filtered = this.orders.filter((order) => {
+    this.$emit("orderCount", this.orders.length);
+    const updatedOrders = this.orders.map(order => {
+      order.totalPrice = (order.unitPrice * order.quantity) + order.unitPriceAddOns;
+
+      if (order.total === order.totalPrice) {
+        order.status = "Completed";
+      }
+      return order;
+    });
+
+    let filtered = updatedOrders.filter(order => {
       return (
         order.customer.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         order.date.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
@@ -368,6 +423,11 @@ export default {
     const start = (this.currentPage - 1) * this.itemsPerPage;
     const end = start + this.itemsPerPage;
     return this.filteredOrders.slice(start, end);
+  },
+  totalAddOns() {
+    return this.selectedAccessories.reduce((sum, accessoryValue) => {
+      return sum + this.getAccessoryPrice(accessoryValue);
+    }, 0);
   },
 },
   methods: {
@@ -399,29 +459,67 @@ export default {
       if (typeof value !== 'number') return '₱0';
       return `₱${value.toLocaleString('en-US')}`;
     },
+    closeModal() {
+      this.isModalVisible = false;
+      this.modalOrder = {
+        id: null,
+        customer: "",
+        date: "",
+        status: "",
+        total: 0,
+        paymentMethod: "",
+      };
+      this.resetErrorFlags();
+    },
     viewOrder(order) {
       this.selectedOrder = order;
       this.viewModalVisible = true;
+      this.accessoriesNone = this.selectedOrder.selectedAccessories.length === 0 ? 'None' : '';
     },
     closeViewModal() {
       this.viewModalVisible = false;
     },
+    closeDeleteModal() {
+      this.deleteModalVisible = false;
+    },
     deleteOrder(order) {
       this.selectedOrder = order;
       this.deleteModalVisible = true;
-    },
-    closeDeleteModal() {
-      this.deleteModalVisible = false;
     },
     confirmDelete() {
       this.orders = this.orders.filter((order) => order.id !== this.selectedOrder.id);
       this.closeDeleteModal();
     },
     openAddOrderModal() {
+      const validationRules = {
+        unitNameError: '',
+        showUnitNameError: false,
+        unitPriceError: '',
+        showUnitPriceError: false,
+        quantityError: '',
+        showQuantityError: false,
+        customerError: '',
+        showCustomerError: false,
+        dateError: '',
+        showDateError: false,
+        statusError: '',
+        showStatusError: false,
+        totalError: '',
+        showTotalError: false,
+        paymentError: '',
+        showPaymentError: false
+      };
+
+      Object.entries(validationRules).forEach(([key, value]) => {
+        this[key] = value;
+      });
       this.modalTitle = "Add New Order";
       this.modalOrder = {
         id: null,
         customer: "",
+        unitName: "",
+        unitPrice: 0,
+        quantity: 0,
         date: "",
         status: "",
         total: 0,
@@ -437,12 +535,15 @@ export default {
     },
     saveOrder() {
       this.validateField('customer');
+      this.validateField('unitName');
+      this.validateField('unitPrice');
+      this.validateField('quantity');
       this.validateField('date');
       this.validateField('status');
       this.validateField('total');
       this.validateField('paymentMethod');
 
-      if (this.showCustomerError || this.showDateError || this.showStatusError || this.showTotalError || this.showPaymentError) {
+      if (this.showCustomerError || this.showUnitNameError || this.showUnitPriceError || this.showQuantityError || this.showDateError || this.showStatusError || this.showTotalError || this.showPaymentError) {
         return;
       }
 
@@ -455,87 +556,115 @@ export default {
           : 1;
         this.orders.push({ ...this.modalOrder, id: newId });
       }
-      this.closeModal()
+
+      this.closeModal();
     },
     resetErrorFlags() {
       this.showCustomerError = false;
+      this.showUnitNameError = false;
+      this.showUnitPriceError = false;
+      this.showQuantityError = false;
       this.showDateError = false;
       this.showStatusError = false;
       this.showTotalError = false;
       this.showPaymentError = false;
     },
     validateField(field) {
-      if (field === 'customer') {
-        if (!this.modalOrder.customer) {
-          this.showCustomerError = true;
-          this.customerError = 'Customer name is required.';
-        } else if (this.modalOrder.customer.length > 20) {
-          this.showCustomerError = true;
-          this.customerError = 'Customer name exceeds the maximum limit (20 characters).';
-        } else {
-          this.showCustomerError = false;
-          this.customerError = '';
-        }
-      } else if (field === 'date') {
-        if (!this.modalOrder.date) {
-          this.showDateError = true;
-          this.dateError = 'Date is required.';
-        } else {
-          this.showDateError = false;
-          this.dateError = '';
-        }
-      } else if (field === 'status') {
-        if (!this.modalOrder.status) {
-          this.showStatusError = true;
-          this.statusError = 'Status is required.';
-        } else {
-          this.showStatusError = false;
-          this.statusError = '';
-        }
-      } else if (field === 'total') {
-        if (!this.modalOrder.total || this.modalOrder.total <= 0) {
-          this.showTotalError = true;
-          this.totalError = 'Please enter a valid total.';
-        } else {
-          this.showTotalError = false;
-          this.totalError = '';
-        }
-      } else if (field === 'paymentMethod') {
-        if (!this.modalOrder.paymentMethod) {
-          this.showPaymentError = true;
-          this.paymentError = 'Payment Method is required.';
-        } else {
-          this.showPaymentError = false;
-          this.paymentError = '';
-        }
+      const validationRules = {
+        customer: {
+          validate: () => (!this.modalOrder.customer ? 'Customer name is required.' : ''),
+          errorKey: 'customerError',
+          showErrorKey: 'showCustomerError',
+        },
+        unitName: {
+          validate: () => (!this.modalOrder.unitName ? 'Unit Name is required.' : ''),
+          errorKey: 'unitNameError',
+          showErrorKey: 'showUnitNameError',
+        },
+        unitPrice: {
+          validate: () => !this.modalOrder.unitPrice || this.modalOrder.unitPrice <= 0 ? 'Please enter a valid unit price.' : '',
+          errorKey: 'unitPriceError',
+          showErrorKey: 'showUnitPriceError',
+        },
+        quantity: {
+          validate: () => !this.modalOrder.quantity || this.modalOrder.quantity <= 0 ? 'Please enter a valid quantity.' : '',
+          errorKey: 'quantityError',
+          showErrorKey: 'showQuantityError',
+        },
+        date: {
+          validate: () => (!this.modalOrder.date ? 'Date is required.' : ''),
+          errorKey: 'dateError',
+          showErrorKey: 'showDateError',
+        },
+        status: {
+          validate: () => (!this.modalOrder.status ? 'Status is required.' : ''),
+          errorKey: 'statusError',
+          showErrorKey: 'showStatusError',
+        },
+        total: {
+        validate: () => !this.modalOrder.total || this.modalOrder.total <= 0 ? 'Please enter a valid total.' : '',
+          errorKey: 'totalError',
+          showErrorKey: 'showTotalError',
+        },
+        paymentMethod: {
+          validate: () => (!this.modalOrder.paymentMethod ? 'Payment Method is required.' : ''),
+          errorKey: 'paymentError',
+          showErrorKey: 'showPaymentError',
+        },
+      };
+
+      const rule = validationRules[field];
+      if (rule) {
+        const errorMessage = rule.validate();
+        this[rule.errorKey] = errorMessage;
+        this[rule.showErrorKey] = !!errorMessage;
       }
     },
-    closeModal() {
-      this.isModalVisible = false;
-      this.modalOrder = {
-        id: null,
-        customer: "",
-        date: "",
-        status: "",
-        total: 0,
-        paymentMethod: "",
-      };
-      this.resetErrorFlags();
-    },
+
     markAsChecked(order) {
       this.checkedOrder = order;
       this.checkModalVisible = true;
       this.orders = this.orders.filter((o) => o.id !== order.id);
-      this.$emit("orderChecked", order.total);
+      this.$emit("orderChecked", order.totalPrice);
+      this.$emit("orderQuantity", order.quantity);
     },
     closeCheckModal() {
       this.checkModalVisible = false;
     },
+    openAdditionalAccessoriesModal() {
+      this.selectedAccessories = [...(this.modalOrder.selectedAccessories || [])];
+      this.additionalAccessoriesModalVisible = true;
+    },
+    closeAdditionalAccessoriesModal() {
+      this.selectedAccessories = [];
+      this.additionalAccessoriesModalVisible = false;
+    },
+    confirmAdditionalAccessories() {
 
+      const totalAddOns = this.selectedAccessories.reduce((sum, accessoryValue) => {
+        return sum + this.getAccessoryPrice(accessoryValue);
+      }, 0);
+
+      this.modalOrder.unitPriceAddOns = totalAddOns;
+      this.modalOrder.totalPrice = (this.modalOrder.total + totalAddOns) * this.modalOrder.quantity;
+      this.modalOrder.selectedAccessories = [...this.selectedAccessories];
+      alert(`${this.modalOrder.selectedAccessories.length} accessories have been added to your order for ${this.modalOrder.customer}.`);
+
+      this.closeAdditionalAccessoriesModal();
+    },
+    getAccessoryPrice(accessoryValue) {
+      const accessory = this.accessories.find(acc => acc.value === accessoryValue);
+      if (accessory) {
+        const priceMatch = accessory.text.match(/\(P(\d+(?:,\d{3})*)\)/);
+        if (priceMatch) {
+          return parseFloat(priceMatch[1].replace(',', ''));
+        }
+      }
+      return 0;
+    },
   },
 };
 </script>
-
 
 <style scoped>
 .error {
@@ -592,7 +721,6 @@ button:hover {
 
 .btn-gap {
   display: flex;
-  justify-content: space-around;
   gap: 5px;
 }
 
@@ -650,6 +778,17 @@ button:hover {
   z-index: 1000;
 }
 
+.accessory-item {
+  margin-bottom: 2px;
+  text-align: left;
+  display: flex;
+  gap: 10px;
+}
+
+.accessory-btn {
+  margin-bottom: 10px ;
+}
+
 .modal {
   background-color: #ffffff;
   padding: 20px;
@@ -661,10 +800,19 @@ button:hover {
   z-index: 1001;
 }
 
-.modal-content p,
-h2 {
+.modal-content h2 {
   margin-bottom: 10px;
   text-align: center;
+}
+
+.modal-content p,
+ul {
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.modal-content ul {
+  padding-left: 20px;
 }
 
 .modal-buttons {
@@ -716,14 +864,14 @@ h2 {
 
 @media (max-width: 1700px) {
   .table-top-container {
-    min-width: 474px;
+    min-width: 490px;
     width: 100%;
   }
 
   table {
+    min-width: 490px;
     width: 100%;
     font-size: 12px;
-    height: 300px;
   }
 
   th,

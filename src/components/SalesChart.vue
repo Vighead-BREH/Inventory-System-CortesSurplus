@@ -18,7 +18,7 @@ import { Chart } from "chart.js/auto";
 
 export default {
   props: {
-    totalSoldCount : {
+    totalSoldCount: {
       type: Number,
       required: true
     },
@@ -46,20 +46,17 @@ export default {
     totalSoldCount: "updateSalesCount",
   },
   methods: {
-    // Update the sales count based on the totalSales value
     updateSalesCount() {
-      // Share the same totalSales value across all timeframes
-      this.salesCount.weekly = this.salesCount.weekly.map(() => this.totalSoldCount);
-      this.salesCount.monthly = this.salesCount.monthly.map(() => this.totalSoldCount);
-      this.salesCount.yearly = this.salesCount.yearly.map(() => this.totalSoldCount);
+      this.salesCount.weekly = [this.totalSoldCount, ...Array(this.salesCount.weekly.length - 1).fill(0)];
+      this.salesCount.monthly = [this.totalSoldCount, ...Array(this.salesCount.monthly.length - 1).fill(0)];
+      this.salesCount.yearly = [this.totalSoldCount, ...Array(this.salesCount.yearly.length - 1).fill(0)];
       this.createChart();
     },
 
-    // Create or update the chart
     createChart() {
       const ctx = document.getElementById("salesChart").getContext("2d");
       if (this.chartInstance) {
-        this.chartInstance.destroy(); // Destroy the previous chart instance
+        this.chartInstance.destroy();
       }
 
       let data;
@@ -107,15 +104,16 @@ export default {
     },
     changeTimeframe(event) {
       this.selectedTimeframe = event.target.value;
-      this.createChart(); // Recreate the chart with new data
+      this.createChart();
     }
   },
-  beforeDestroy() {
+  beforeMount() {
     if (this.chartInstance) {
-      this.chartInstance.destroy(); // Clean up chart instance when component is destroyed
+      this.chartInstance.destroy();
     }
   }
 };
+
 </script>
 
 <style>

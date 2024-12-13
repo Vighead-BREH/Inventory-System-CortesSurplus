@@ -1,16 +1,17 @@
 <script setup>
-import { ref } from "vue";
-import NavHeader from "../components/NavHeader.vue";
-import NavSideBar from "../components/NavSideBar.vue";
-import InventoryTracking from "@/components/InventoryTracking.vue";
-import CarTable from "@/components/CarTable.vue";
-import MaterialsChart from "@/components/MaterialsChart.vue";
+import { ref } from 'vue'
+import NavHeader from '../components/NavHeader.vue'
+import NavSideBar from '../components/NavSideBar.vue'
+import InventoryTracking from '@/components/InventoryTracking.vue'
+import CarTable from '@/components/CarTable.vue'
+import MaterialsChart from '@/components/MaterialsChart.vue'
 
-const isSidebarVisible = ref(false);
+const isSidebarVisible = ref(false)
 
 function toggleSidebar() {
-  isSidebarVisible.value = !isSidebarVisible.value;
+  isSidebarVisible.value = !isSidebarVisible.value
 }
+
 </script>
 
 <template>
@@ -56,7 +57,6 @@ function toggleSidebar() {
 </template>
 
 <style scoped>
-
 h1 {
   color: #fff;
 }
