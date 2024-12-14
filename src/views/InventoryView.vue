@@ -45,7 +45,7 @@ function toggleSidebar() {
         <!-- Sales Reports Section -->
         <div class="row-container">
           <div class="table-content-container">
-            <h1>Sales Reports</h1>
+            <h1>Materials Table</h1>
             <div class="table-content">
               <InventoryTracking />
             </div>

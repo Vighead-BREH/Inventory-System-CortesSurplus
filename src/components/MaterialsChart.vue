@@ -6,6 +6,8 @@
 
 <script>
 import { Chart, registerables } from 'chart.js'
+import { useMaterialsStore } from '@/stores/materialsStore';
+import { watch } from 'vue';
 
 export default {
   data() {
@@ -15,14 +17,14 @@ export default {
         datasets: [
           {
             label: 'Stock',
-            data: [65, 59, 80, 81, 56, 55, 40],
+            data: [],
             backgroundColor: 'rgba(75, 192, 192, 0.2)',
             borderColor: 'rgba(75, 192, 192, 1)',
             borderWidth: 2,
           },
           {
             label: 'Used',
-            data: [28, 48, 40, 19, 86, 27, 90],
+            data: [],
             backgroundColor: 'rgba(153, 102, 255, 0.2)',
             borderColor: 'rgba(153, 102, 255, 1)',
             borderWidth: 2,
@@ -32,14 +34,32 @@ export default {
     }
   },
   mounted() {
+    const store = useMaterialsStore()
+    this.mockData.datasets[0].data = [store.totalStock, 0, 0, 0, 0, 0, 0]
+    this.mockData.datasets[1].data = [store.totalStockUsed, 0, 0, 0, 0, 0, 0]
+
     Chart.register(...registerables)
     this.createBarChart()
+
+    watch(
+      () => store.totalStock,
+      (newValue) => {
+        this.updateChartData(newValue, 'stock')
+      }
+    )
+
+    watch(
+      () => store.totalStockUsed,
+      (newValue) => {
+        this.updateChartData(newValue, 'used')
+      }
+    )
   },
   methods: {
     createBarChart() {
       const barChart = this.$refs.barChart
       if (barChart) {
-        new Chart(barChart, {
+        this.chartInstance = new Chart(barChart, {
           type: 'bar',
           data: this.mockData,
           options: {
@@ -58,6 +78,14 @@ export default {
           },
         })
       }
+    },
+    updateChartData(newValue, type) {
+      if (type === 'stock') {
+        this.mockData.datasets[0].data[0] = newValue
+      } else if (type === 'used') {
+        this.mockData.datasets[1].data[0] = newValue
+      }
+      this.chartInstance.update()
     },
   },
 }

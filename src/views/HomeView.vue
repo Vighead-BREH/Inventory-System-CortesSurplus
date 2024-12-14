@@ -1,42 +1,38 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import NavHeader from '../components/NavHeader.vue'
 import NavSideBar from '../components/NavSideBar.vue'
 import SalesChart from '@/components/SalesChart.vue'
 import CarTable from '@/components/CarTable.vue'
-import OrderTable from '@/components/OrderTable.vue'
+import InventoryTracking from '@/components/InventoryTracking.vue'
 import MaterialCharts from '@/components/MaterialsChart.vue'
 import { useMaterialsStore } from '@/stores/materialsStore'
+import { useCarStore } from '@/stores/carStore'
 
 const isSidebarVisible = ref(false)
+const carStore = useCarStore()
+const materialsStore = useMaterialsStore()
+
 const totalSales = ref(0)
-const totalSoldCount = ref(0)
-const totalOrders = ref(0)
+const totalStock = computed(() => materialsStore.totalStock)
+
+onMounted(async () => {
+  await carStore.getCars()
+  await materialsStore.getMaterials()
+
+  totalSales.value = await carStore.calculateTotalSales()
+})
 
 function toggleSidebar() {
   isSidebarVisible.value = !isSidebarVisible.value
 }
 
-function logStoreState() {
-  const store = useMaterialsStore()
-  console.log('Total Stock:', store.getTotalStock)
-  console.log('Stock Used:', store.getStockUsed)
-}
-
-function updateTotalSales(amount) {
-  totalSales.value += amount
-}
-
-function updateTotalSoldCount(count) {
-  totalSoldCount.value += count
-}
-
-function updateTotalOrders(count) {
-  totalOrders.value = count
-}
-
 function formatPrice(amount) {
   return `₱${amount.toLocaleString('en-US')}`
+}
+
+function formatMaterials(amount) {
+  return `${amount.toLocaleString('en-US')}`
 }
 </script>
 
@@ -53,15 +49,14 @@ function formatPrice(amount) {
           <div class="sales-content">
             <h1>Sales Chart</h1>
             <div class="salesChart">
-              <SalesChart :total-sold-count="totalSoldCount" />
-              <button @click="logStoreState">Log Store State</button>
+              <SalesChart />
             </div>
           </div>
           <!-- Car Table -->
           <div class="table-content-container">
             <h1>Market-Ready Vehicles</h1>
             <div class="table-content">
-              <CarTable @car-sold="updateTotalSales" @car-sold-count="updateTotalSoldCount" />
+              <CarTable />
             </div>
             <!-- Total Sales and Feedback Cards -->
             <div class="total-sales-container">
@@ -72,9 +67,9 @@ function formatPrice(amount) {
                 </p>
               </div>
               <div class="total-order-card">
-                <h2><i class="fas fa-shopping-cart"></i> Orders</h2>
+                <h2><i class="fas fa-box"></i> Materials Stock</h2>
                 <p>
-                  Total Orders: <span class="highlight">{{ totalOrders }}</span>
+                  Total Materials: <span class="highlight">{{ formatMaterials(totalStock) }}</span>
                 </p>
               </div>
             </div>
@@ -83,13 +78,9 @@ function formatPrice(amount) {
         <div class="row-container order-table">
           <!-- Orders Table -->
           <div class="table-content-container">
-            <h1>Orders</h1>
+            <h1>Materials Table</h1>
             <div class="table-content">
-              <OrderTable
-                @orderChecked="updateTotalSales"
-                @orderQuantity="updateTotalSoldCount"
-                @orderCount="updateTotalOrders"
-              />
+              <InventoryTracking />
             </div>
           </div>
           <div class="material-content">

@@ -3,7 +3,6 @@ import { ref } from "vue";
 import NavHeader from "../components/NavHeader.vue";
 import NavSideBar from "../components/NavSideBar.vue";
 import SalesChart from "@/components/SalesChart.vue";
-import OrderTable from "@/components/OrderTable.vue";
 import SalesReports from "@/components/SalesReport.vue";
 
 const isSidebarVisible = ref(false);
@@ -26,15 +25,6 @@ function toggleSidebar() {
             <h1>Sales Chart</h1>
             <div class="salesChart">
               <SalesChart />
-            </div>
-          </div>
-        </div>
-
-        <div class="row-container order-table">
-          <div class="table-content-container">
-            <h1>Orders</h1>
-            <div class="table-content">
-              <OrderTable />
             </div>
           </div>
         </div>

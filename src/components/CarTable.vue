@@ -3,16 +3,16 @@
     <div class="table-top-container">
       <div class="search-container">
         <input
-          v-model="searchQuery"
+          v-model="carStore.searchQuery"
           type="text"
-          placeholder="Search orders..."
+          placeholder="Search cars..."
           class="search-input"
         />
       </div>
       <div class="pagination-controls">
-        <button :disabled="currentPage <= 1" @click="prevPage">Prev</button>
-        <span>Page {{ currentPage }} / {{ totalPages }}</span>
-        <button :disabled="currentPage >= totalPages" @click="nextPage">Next</button>
+        <button :disabled="carStore.currentPage <= 1" @click="prevPage">Prev</button>
+        <span>Page {{ carStore.currentPage }} / {{ totalPages }}</span>
+        <button :disabled="carStore.currentPage >= totalPages" @click="nextPage">Next</button>
       </div>
     </div>
 
@@ -52,7 +52,7 @@
           <td>{{ car.unitName }}</td>
           <td>
             <div class="quantity-indicator">
-              {{ car.quantity }}
+              {{ formatQuantity(car.quantity) }}
               <span
                 class="led"
                 :class="{ green: car.quantity > 0, red: car.quantity === 0 }"
@@ -70,51 +70,53 @@
         </tr>
       </tbody>
     </table>
-    <button @click="openAddCarModal" style="margin: 5px 0 0 0; color: #007bff;"><i class="fa-solid fa-plus"></i></button>
+    <button @click="openAddCarModal" style="margin: 5px 0 0 0; color: #007bff;">
+      <i class="fa-solid fa-plus"></i>
+    </button>
   </div>
 
   <!-- Add or Edit Car Modal -->
-  <div v-if="isModalVisible" class="modal-backdrop" @click="closeModal">
+  <div v-if="carStore.isModalVisible" class="modal-backdrop" @click="closeModal">
     <div class="modal" @click.stop>
       <div class="modal-content">
-        <h2>{{ modalTitle }}</h2>
+        <h2>{{ carStore.modalTitle }}</h2>
 
-          <!-- Unit Name -->
-          <label for="unitName">Unit Name:</label>
-          <input
-            v-model="modalCar.unitName"
-            id="unitName"
-            type="text"
-            placeholder="Enter unit name"
-            maxlength="20"
-            @input="validateField('unitName')"
-            @blur="validateField('unitName')"
-          />
-          <p v-if="showUnitNameError" class="error">{{ unitNameError }}</p>
+        <!-- Unit Name -->
+        <label for="unitName">Unit Name:</label>
+        <input
+          v-model="carStore.modalCar.unitName"
+          id="unitName"
+          type="text"
+          placeholder="Enter unit name"
+          maxlength="20"
+          @input="validateField('unitName')"
+          @blur="validateField('unitName')"
+        />
+        <p v-if="carStore.showUnitNameError" class="error">{{ carStore.validationErrors.unitName }}</p>
 
-          <!-- Quantity -->
-          <label for="quantity">Quantity:</label>
-          <input
-            v-model="modalCar.quantity"
-            id="quantity"
-            type="number"
-            placeholder="Enter quantity"
-            @input="validateField('quantity')"
-            @blur="validateField('quantity')"
-          />
-          <p v-if="showQuantityError" class="error">{{ quantityError }}</p>
+        <!-- Quantity -->
+        <label for="quantity">Quantity:</label>
+        <input
+          v-model="carStore.modalCar.quantity"
+          id="quantity"
+          type="number"
+          placeholder="Enter quantity"
+          @input="validateField('quantity')"
+          @blur="validateField('quantity')"
+        />
+        <p v-if="carStore.showQuantityError" class="error">{{ carStore.validationErrors.quantity }}</p>
 
-          <!-- Price -->
-          <label for="price">Price:</label>
-          <input
-            v-model="modalCar.price"
-            id="price"
-            type="number"
-            placeholder="Enter price"
-            @input="validateField('price')"
-            @blur="validateField('price')"
-          />
-          <p v-if="showPriceError" class="error">{{ priceError }}</p>
+        <!-- Price -->
+        <label for="price">Price:</label>
+        <input
+          v-model="carStore.modalCar.price"
+          id="price"
+          type="number"
+          placeholder="Enter price"
+          @input="validateField('price')"
+          @blur="validateField('price')"
+        />
+        <p v-if="carStore.showPriceError" class="error">{{ carStore.validationErrors.price }}</p>
 
         <div class="modal-buttons btn-gap">
           <button @click="saveCar" :disabled="hasValidationErrors">Save</button>
@@ -125,55 +127,59 @@
   </div>
 
   <!-- Sold Car Modal -->
-  <div v-if="isSoldModalVisible" class="modal-backdrop" @click="closeSoldModal">
+  <div v-if="carStore.isSoldModalVisible" class="modal-backdrop" @click="closeSoldModal">
     <div class="modal" @click.stop>
       <div class="modal-content">
         <h2>Mark Car as Sold</h2>
         <p>Are you sure you want to mark this car as sold?</p>
-        <p>
-          <strong>{{ soldCar.unitName }}</strong>
-        </p>
+        <p><strong>{{ carStore.soldCar.unitName }}</strong></p>
+
         <label for="soldQuantity">Quantity Sold:</label>
         <input
-          v-model="soldCar.soldQuantity"
+          v-model="carStore.soldCar.soldQuantity"
           id="soldQuantity"
           type="number"
           placeholder="Enter quantity sold"
+          @input="validateField('soldQuantity')"
+          @blur="validateField('soldQuantity')"
         />
-        <p v-if="soldCar.soldQuantity > soldCar.quantity" class="error">Not enough stock.</p>
-        <p v-if="soldCar.soldQuantity < 0" class="error">Please input a valid number.</p>
+        <p v-if="carStore.soldCar.soldQuantity > carStore.soldCar.quantity" class="error">Not enough stock.</p>
+        <p v-if="carStore.soldCar.soldQuantity < 0" class="error">Please input a valid number.</p>
+
         <label for="customer">Customer:</label>
         <input
-          v-model="soldCar.customer"
+          v-model="carStore.soldCar.customer"
           id="customer"
           type="text"
           placeholder="Enter customer name"
           maxlength="20"
+          required
           @input="validateField('customer')"
           @blur="validateField('customer')"
         />
-        <p v-if="showCustomerError" class="error">{{ customerError }}</p>
-        <p>Price per unit: {{ formatPrice(soldCar.price) }}</p>
-        <p v-if="soldCar.soldQuantity > 0">
-          Total Price: {{ formatPrice(soldCar.soldQuantity * soldCar.price) }}
+        <p v-if="carStore.showCustomerError" class="error">{{ carStore.validationErrors.customer }}</p>
+
+        <p>Price per unit: {{ formatPrice(carStore.soldCar.price) }}</p>
+        <p v-if="carStore.soldCar.soldQuantity > 0">
+          Total Price: {{ formatPrice(carStore.soldCar.soldQuantity * carStore.soldCar.price) }}
         </p>
         <p v-else>Total Price: {{ formatPrice(0) }}</p>
-        <div>
-          <div class="modal-buttons btn-gap">
-            <button @click="markAsSold" :disabled="!isSoldCarValid">Yes</button>
-            <button @click="closeSoldModal">Cancel</button>
-          </div>
+
+        <div class="modal-buttons btn-gap">
+          <button @click="markAsSold" :disabled="hasValidationErrors">Yes</button>
+          <button @click="closeSoldModal">Cancel</button>
         </div>
       </div>
     </div>
   </div>
 
-  <div v-if="isDeleteModalVisible" class="modal-backdrop" @click="closeDeleteModal">
+  <!-- Delete Car Modal -->
+  <div v-if="carStore.isDeleteModalVisible" class="modal-backdrop" @click="closeDeleteModal">
     <div class="modal" @click.stop>
       <div class="modal-content">
         <h2>Are you sure you want to delete this car?</h2>
         <div class="modal-buttons btn-gap">
-          <button @click="deleteCar(carToDelete.id)">Yes</button>
+          <button @click="deleteCar(carStore.carToDelete.id)">Yes</button>
           <button @click="closeDeleteModal">Cancel</button>
         </div>
       </div>
@@ -182,252 +188,91 @@
 </template>
 
 <script>
+import { useCarStore } from '@/stores/carStore';
+
 export default {
   name: 'CarTable',
-  emits: ['car-sold', 'car-sold-count'],
-  data() {
+  setup() {
+    const carStore = useCarStore();
+
     return {
-      cars: [
-        { id: 1, unitName: 'Toyota Corolla', customer: 'Marc Ejay', quantity: 5, price: 1500000 },
-        { id: 2, unitName: 'Honda Accord', quantity: 3, price: 1800000 },
-        { id: 3, unitName: 'Ford Ranger', quantity: 7, price: 2500000 },
-        { id: 4, unitName: 'Chevrolet Spark', quantity: 2, price: 900000 },
-        { id: 5, unitName: 'Tesla Model S', quantity: 1, price: 7500000 },
-        { id: 6, unitName: 'Nissan Altima', quantity: 4, price: 2000000 },
-        { id: 7, unitName: 'BMW 3 Series', quantity: 6, price: 3200000 },
-        { id: 8, unitName: 'Audi Q5', quantity: 8, price: 4000000 },
-        { id: 9, unitName: 'Mercedes-Benz C-Class', quantity: 3, price: 3800000 },
-        { id: 10, unitName: 'Kia Sportage', quantity: 5, price: 1800000 },
-      ],
-      currentPage: 1,
-      itemsPerPage: 5,
-      searchQuery: "",
-      sortBy: '',
-      sortOrder: 'asc',
-      isModalVisible: false,
-      isSoldModalVisible: false,
-      isDeleteModalVisible: false,
-      carToDelete: null,
-      modalTitle: '',
-      modalCar: {
-        id: null,
-        unitName: '',
-        quantity: 0,
-        price: 0,
-      },
-      soldCar: {
-        id: null,
-        unitName: '',
-        quantity: 0,
-        soldQuantity: 0,
-        price: 0,
-      },
-      showUnitNameError: false,
-      showCustomerError: false,
-      showQuantityError: false,
-      showPriceError: false,
-      unitNameError: '',
-      customerError: '',
-      quantityError: '',
-      priceError: '',
+      carStore,
     };
   },
   computed: {
     filteredCars() {
-      return this.cars.filter((car) => {
-        return car.unitName.toLowerCase().includes(this.searchQuery.toLowerCase());
-      });
+      return this.carStore.filteredCars;
     },
     totalPages() {
-      return Math.ceil(this.filteredCars.length / this.itemsPerPage);
-    },
-    hasValidationErrors() {
-      return (
-        !this.modalCar.unitName ||
-        this.modalCar.unitName.length === 0 ||
-        this.modalCar.quantity <= 0 ||
-        isNaN(this.modalCar.quantity) ||
-        this.modalCar.price <= 0 ||
-        isNaN(this.modalCar.price) ||
-        this.modalCar.unitName.length > 20
-      );
-    },
-    isSoldCarValid() {
-      return this.soldCar.soldQuantity > 0 && this.soldCar.soldQuantity <= this.soldCar.quantity;
-    },
-    sortedCars() {
-      return [...this.filteredCars].sort((a, b) => {
-        const factor = this.sortOrder === 'asc' ? 1 : -1;
-        if (typeof a[this.sortBy] === 'string') {
-          return factor * a[this.sortBy].localeCompare(b[this.sortBy]);
-        } else {
-          return factor * (a[this.sortBy] - b[this.sortBy]);
-        }
-      });
+      return this.carStore.totalPages;
     },
     paginatedSortedCars() {
-      const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-      return this.sortedCars.slice(startIndex, startIndex + this.itemsPerPage);
+      return this.carStore.paginatedSortedCars;
+    },
+    hasValidationErrors() {
+      return Object.values(this.carStore.validationErrors).some((error) => error !== '');
+    },
+    isSoldCarValid() {
+      return this.carStore.soldCar.soldQuantity > 0 && this.carStore.soldCar.soldQuantity <= this.carStore.soldCar.quantity;
+    },
+    isSoldCarCustomerValid() {
+      return this.carStore.soldCar.customer.length > 0;
     },
   },
   methods: {
     changeSort(column) {
-      if (this.sortBy === column) {
-        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
-      } else {
-        this.sortBy = column;
-        this.sortOrder = 'asc';
-      }
+      this.carStore.changeSort(column);
     },
     getSortIcon(column) {
-      if (this.sortBy === column) {
-        return this.sortOrder === 'asc' ? '⬆' : '⬇';
+      if (this.carStore.sortBy === column) {
+        return this.carStore.sortOrder === 'asc' ? '⬆' : '⬇';
       }
       return '⬍';
     },
     formatPrice(value) {
-      if (typeof value !== 'number') return '₱0';
-      return `₱${value.toLocaleString('en-US')}`;
+      return this.carStore.formatPrice(value);
     },
     nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++;
-      }
+      this.carStore.nextPage();
     },
     prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--;
-      }
+      this.carStore.prevPage();
     },
     openAddCarModal() {
-      this.modalTitle = 'Add New Car';
-      this.modalCar = { id: null, unitName: '', quantity: 0, price: 0 };
-      this.isModalVisible = true;
-      this.resetErrorFlags();
+      this.carStore.openAddCarModal();
     },
     editCar(car) {
-      this.modalTitle = 'Edit Car';
-      this.modalCar = { ...car };
-      this.isModalVisible = true;
-      this.resetErrorFlags();
+      this.carStore.editCar(car);
     },
     closeModal() {
-      this.isModalVisible = false;
-      this.modalCar = { id: null,
-        unitName: '',
-        quantity: 0,
-        price: 0
-      };
-      this.resetErrorFlags();
+      this.carStore.closeModal();
     },
     deleteCar(id) {
-      this.cars = this.cars.filter((car) => car.id !== id);
-      this.closeDeleteModal();
+      this.carStore.deleteCar(id);
     },
     openDeleteCarModal(car) {
-      this.carToDelete = { ...car };
-      this.isDeleteModalVisible = true;
+      this.carStore.openDeleteCarModal(car);
     },
     closeDeleteModal() {
-      this.isDeleteModalVisible = false;
+      this.carStore.closeDeleteModal();
     },
     openSoldCarModal(car) {
-      this.soldCar = { ...car, soldQuantity: 0 };
-      this.isSoldModalVisible = true;
+      this.carStore.openSoldCarModal(car);
     },
     closeSoldModal() {
-      this.isSoldModalVisible = false;
+      this.carStore.closeSoldModal();
     },
     markAsSold() {
-      if (this.soldCar.soldQuantity > 0) {
-        const car = this.cars.find((c) => c.id === this.soldCar.id);
-        if (car) {
-          const totalPrice = this.soldCar.soldQuantity * car.price;
-          const soldCount = this.soldCar.soldQuantity;
-          if (car.quantity >= this.soldCar.soldQuantity) {
-            car.quantity -= this.soldCar.soldQuantity;
-            this.$emit('car-sold', totalPrice);
-            this.$emit('car-sold-count', soldCount);
-            this.closeSoldModal();
-          }
-        }
-      }
+      this.carStore.markAsSold();
     },
     saveCar() {
-      this.validateField('unitName');
-      this.validateField('quantity');
-      this.validateField('price');
-
-      if (this.showUnitNameError || this.showQuantityError || this.showPriceError) {
-        return;
-      }
-
-      const index = this.cars.findIndex((car) => car.id === this.modalCar.id);
-      if (index !== -1) {
-        this.cars.splice(index, 1, { ...this.modalCar });
-      } else {
-        const newId = Math.max(...this.cars.map((car) => car.id)) + 1;
-        this.cars.push({ ...this.modalCar, id: newId });
-      }
-      this.closeModal();
-    },
-    resetErrorFlags() {
-      this.showUnitNameError = false;
-      this.showQuantityError = false;
-      this.showPriceError = false;
+      this.carStore.saveCar();
     },
     validateField(field) {
-      const validationRules = {
-        unitName: {
-          validate: () => {
-            if (!this.modalCar.unitName) {
-              return 'Unit name is required.';
-            } else if (this.modalCar.unitName.length > 20) {
-              return 'Unit name must be 20 characters or less.';
-            }
-            return '';
-          },
-          errorKey: 'unitNameError',
-          showErrorKey: 'showUnitNameError',
-        },
-        customer: {
-          validate: () => {
-            if (!this.soldCar.customer || this.soldCar.customer.trim().length === 0) {
-              return 'Customer name is required.';
-            }
-            return '';
-          },
-          errorKey: 'customerError',
-          showErrorKey: 'showCustomerError',
-        },
-        quantity: {
-          validate: () => {
-            if (!this.modalCar.quantity || this.modalCar.quantity <= 0) {
-              return 'Input a valid quantity number.';
-            }
-            return '';
-          },
-          errorKey: 'quantityError',
-          showErrorKey: 'showQuantityError',
-        },
-        price: {
-          validate: () => {
-            if (!this.modalCar.price || this.modalCar.price <= 0) {
-              return 'Input a valid price number.';
-            }
-            return '';
-          },
-          errorKey: 'priceError',
-          showErrorKey: 'showPriceError',
-        },
-      };
-
-      const rule = validationRules[field];
-      if (rule) {
-        const errorMessage = rule.validate();
-        this[rule.errorKey] = errorMessage;
-        this[rule.showErrorKey] = !!errorMessage;
-      }
+      this.carStore.validateField(field);
+    },
+     formatQuantity(amount) {
+      return `${amount.toLocaleString('en-US')}`
     }
   },
 };
@@ -643,12 +488,14 @@ h2 {
   table {
     min-width: 490px;
     width: 100%;
-    font-size: 12px;
+    font-size: 14px;
+    /* min-height: 274px;
+    height: 100%; */
   }
 
   th,
   td {
-    padding: 5px;
+    padding: 9px;
   }
 
   button {

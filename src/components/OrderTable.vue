@@ -287,7 +287,6 @@
 <script>
 export default {
   name: "OrderTable",
-  emits: ['orderChecked', 'orderQuantity', 'orderCount'],
   data() {
     return {
       orders: [
@@ -387,7 +386,6 @@ export default {
     return Math.ceil(this.filteredOrders.length / this.itemsPerPage);
   },
   filteredOrders() {
-    this.$emit("orderCount", this.orders.length);
     const updatedOrders = this.orders.map(order => {
       order.totalPrice = (order.unitPrice * order.quantity) + order.unitPriceAddOns;
 
@@ -625,8 +623,6 @@ export default {
       this.checkedOrder = order;
       this.checkModalVisible = true;
       this.orders = this.orders.filter((o) => o.id !== order.id);
-      this.$emit("orderChecked", order.totalPrice);
-      this.$emit("orderQuantity", order.quantity);
     },
     closeCheckModal() {
       this.checkModalVisible = false;

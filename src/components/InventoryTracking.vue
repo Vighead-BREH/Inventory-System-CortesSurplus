@@ -29,7 +29,7 @@
       <tbody>
         <tr v-for="item in paginatedMaterials" :key="item.id">
           <td>{{ item.name }}</td>
-          <td>{{ item.stock }}</td>
+          <td>{{ formatQuantity(item.stock) }}</td>
           <td>
             <span
               :class="{
@@ -37,7 +37,7 @@
                 'in-stock': item.stock >= 5,
               }"
             >
-              {{ item.stock < 5 ? 'Low Stock' : 'In Stock' }}
+              {{ formatQuantity(item.stock) < 5 ? 'Low Stock' : 'In Stock' }}
             </span>
           </td>
           <td>
@@ -114,20 +114,12 @@
 </template>
 
 <script>
-import { useMaterialsStore } from '@/stores/materialsStore' // Import Pinia store
+import { useMaterialsStore } from '@/stores/materialsStore'
 
 export default {
   name: 'MaterialsInventory',
   data() {
     return {
-      materialsInventory: [
-        { id: 1, name: 'Steel Sheets', stock: 10 },
-        { id: 2, name: 'Welding Rods', stock: 3 },
-        { id: 3, name: 'Paint', stock: 8 },
-        { id: 4, name: 'Steel Sheets', stock: 10 },
-        { id: 5, name: 'Welding Rods', stock: 3 },
-        { id: 6, name: 'Paint', stock: 8 },
-      ],
       searchQuery: '',
       currentPage: 1,
       itemsPerPage: 5,
@@ -139,10 +131,11 @@ export default {
     }
   },
   computed: {
+    materialsStore() {
+      return useMaterialsStore()
+    },
     filteredMaterials() {
-      return this.materialsInventory.filter((item) => {
-        return item.name.toLowerCase().includes(this.searchQuery.toLowerCase())
-      })
+      return this.materialsStore.filteredMaterials(this.searchQuery)
     },
     totalPages() {
       return Math.ceil(this.filteredMaterials.length / this.itemsPerPage)
@@ -174,60 +167,29 @@ export default {
       this.isModalVisible = true
     },
     saveMaterial() {
-      const index = this.materialsInventory.findIndex(
-        (material) => material.id === this.modalMaterial.id
-      )
-      if (index !== -1) {
-        this.materialsInventory.splice(index, 1, { ...this.modalMaterial })
+      if (this.modalAction === 'Edit') {
+        this.materialsStore.editMaterial(this.modalMaterial)
       } else {
-        const newId =
-          this.materialsInventory.length > 0
-            ? Math.max(...this.materialsInventory.map((material) => material.id)) + 1
-            : 1
-        this.materialsInventory.push({ ...this.modalMaterial, id: newId })
+        this.materialsStore.addMaterial(this.modalMaterial)
       }
-      this.updateTotalStock()
       this.closeModal()
     },
     openDeleteMaterialModal(item) {
       this.modalMaterial = { ...item }
       this.deleteModalVisible = true
     },
-    openUsedMaterialModal(item) {
-      this.modalMaterial = { ...item }
-      this.modalMaterial.stock = 0
-      this.isUsedModalVisible = true
-    },
-    closeUsedModal() {
-      this.isUsedModalVisible = false
-    },
     confirmDeleteMaterial() {
-      this.materialsInventory = this.materialsInventory.filter(
-        (material) => material.id !== this.modalMaterial.id
-      )
-      this.updateTotalStock()
+      this.materialsStore.deleteMaterial(this.modalMaterial.id)
       this.closeDeleteModal()
     },
-    usedMaterial() {
-      const stockUsed = this.modalMaterial.stock
-      const index = this.materialsInventory.findIndex(
-        (material) => material.id === this.modalMaterial.id
-      )
 
-      if (index !== -1 && stockUsed <= this.materialsInventory[index].stock) {
-        this.materialsInventory[index].stock -= stockUsed
-      }
-      this.materialsInventory.splice(index, 1, { ...this.materialsInventory[index] })
-      this.updateTotalStock()
+    openUsedMaterialModal(item) {
+      this.modalMaterial = { ...item, stock: 0 }
+      this.isUsedModalVisible = true
+    },
+    usedMaterial() {
+      this.materialsStore.useMaterial(this.modalMaterial.id, this.modalMaterial.stock)
       this.closeUsedModal()
-    },
-    calculateTotalStock() {
-      return this.materialsInventory.reduce((total, item) => total + item.stock, 0)
-    },
-    updateTotalStock() {
-      const totalStock = this.calculateTotalStock()
-      const materialsStore = useMaterialsStore()
-      materialsStore.setTotalStock(totalStock)
     },
     closeDeleteModal() {
       this.deleteModalVisible = false
@@ -235,15 +197,15 @@ export default {
     closeModal() {
       this.isModalVisible = false
     },
-    logStoreState() {
-      const store = useMaterialsStore()
-      console.log('Total Stock:', store.getTotalStock)
-      console.log('Stock Used:', store.getStockUsed)
+    closeUsedModal() {
+      this.isUsedModalVisible = false
     },
+    formatQuantity(amount) {
+      return `${amount.toLocaleString('en-US')}`
+    }
   },
   mounted() {
-    this.updateTotalStock()
-    this.logStoreState() // Initialize total stock when component is mounted
+    this.materialsStore.calculateTotalStock()
   },
 }
 </script>
@@ -419,12 +381,14 @@ button:hover {
   table {
     min-width: 490px;
     width: 100%;
-    font-size: 12px;
+    font-size: 14px;
+    /* min-height: 308px;
+    height: 100%; */
   }
 
   th,
   td {
-    padding: 5px;
+    padding: 9px;
   }
 
   button {

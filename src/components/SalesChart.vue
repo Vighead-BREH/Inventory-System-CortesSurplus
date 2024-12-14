@@ -14,70 +14,93 @@
 </template>
 
 <script>
-import { Chart } from "chart.js/auto";
+import { Chart } from 'chart.js/auto'
+import { useCarStore } from '@/stores/carStore'
+import { watch } from 'vue'
 
 export default {
-  props: {
-    totalSoldCount: {
-      type: Number,
-      required: true
-    },
-  },
   data() {
     return {
       selectedTimeframe: 'monthly',
       salesCount: {
-        weekly: [0, 0, 0, 0, 0, 0, 0],
-        monthly: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        yearly: [0, 0, 0]
+        weekly: [],
+        monthly: [],
+        yearly: [],
       },
       labels: {
-        weekly: ["Week1", "Week2", "Week3", "Week4", "Week5", "Week6", "Week7"],
-        monthly: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-        yearly: ["2022", "2023", "2024"]
-      }
-    };
+        weekly: ['Week1', 'Week2', 'Week3', 'Week4', 'Week5', 'Week6', 'Week7'],
+        monthly: [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ],
+        yearly: ['2022', '2023', '2024'],
+      },
+    }
   },
   mounted() {
-    this.createChart();
+    this.initializeChart()
+
+    watch(
+      async () => {
+        const store = useCarStore()
+        const totalSold = await store.getTotalCarSoldCount
+        return totalSold
+      },
+      (newValue) => {
+        this.updateChartWithNewValue(newValue)
+      },
+    )
   },
   watch: {
-    selectedTimeframe: "createChart",
-    totalSoldCount: "updateSalesCount",
+    selectedTimeframe: 'createChart',
   },
   methods: {
-    updateSalesCount() {
-      this.salesCount.weekly = [this.totalSoldCount, ...Array(this.salesCount.weekly.length - 1).fill(0)];
-      this.salesCount.monthly = [this.totalSoldCount, ...Array(this.salesCount.monthly.length - 1).fill(0)];
-      this.salesCount.yearly = [this.totalSoldCount, ...Array(this.salesCount.yearly.length - 1).fill(0)];
-      this.createChart();
-    },
+    async initializeChart() {
+      const store = useCarStore()
+      const totalSold = await store.getTotalCarSoldCount
 
+      this.salesCount.weekly = [totalSold, 0, 0, 0, 0, 0, 0]
+      this.salesCount.monthly = [totalSold, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      this.salesCount.yearly = [totalSold, 0, 0]
+
+      this.createChart()
+    },
     createChart() {
-      const ctx = document.getElementById("salesChart").getContext("2d");
+      const ctx = document.getElementById('salesChart').getContext('2d')
+
       if (this.chartInstance) {
-        this.chartInstance.destroy();
+        this.chartInstance.destroy()
       }
 
-      let data;
-      if (this.selectedTimeframe === "weekly") {
-        data = this.salesCount.weekly;
-      } else if (this.selectedTimeframe === "monthly") {
-        data = this.salesCount.monthly;
-      } else if (this.selectedTimeframe === "yearly") {
-        data = this.salesCount.yearly;
+      let data
+      if (this.selectedTimeframe === 'weekly') {
+        data = this.salesCount.weekly
+      } else if (this.selectedTimeframe === 'monthly') {
+        data = this.salesCount.monthly
+      } else if (this.selectedTimeframe === 'yearly') {
+        data = this.salesCount.yearly
       }
 
       this.chartInstance = new Chart(ctx, {
-        type: "line",
+        type: 'line',
         data: {
           labels: this.labels[this.selectedTimeframe],
           datasets: [
             {
-              label: "Sales",
+              label: 'Sales',
               data: data,
-              backgroundColor: "rgba(54, 162, 235, 0.2)",
-              borderColor: "rgba(54, 162, 235, 1)",
+              backgroundColor: 'rgba(54, 162, 235, 0.2)',
+              borderColor: 'rgba(54, 162, 235, 1)',
               borderWidth: 3,
             },
           ],
@@ -89,42 +112,51 @@ export default {
             y: {
               beginAtZero: true,
               grid: {
-                color: "#333",
+                color: '#333',
               },
             },
             x: {
               beginAtZero: true,
               grid: {
-                color: "#333",
+                color: '#333',
               },
             },
           },
         },
-      });
+      })
     },
     changeTimeframe(event) {
-      this.selectedTimeframe = event.target.value;
-      this.createChart();
-    }
+      this.selectedTimeframe = event.target.value
+      this.createChart()
+    },
+    updateChartWithNewValue(newValue) {
+      this.salesCount.weekly[0] = newValue
+      this.salesCount.monthly[0] = newValue
+      this.salesCount.yearly[0] = newValue
+
+      if (this.chartInstance) {
+        this.chartInstance.data.datasets[0].data = this.salesCount[this.selectedTimeframe]
+        this.chartInstance.update()
+      }
+    },
   },
   beforeMount() {
     if (this.chartInstance) {
-      this.chartInstance.destroy();
+      this.chartInstance.destroy()
     }
-  }
-};
-
+  },
+}
 </script>
 
 <style>
-  .chart-container {
-    position: relative;
-    width: 100%;
-    height: 300px;
-    max-height: 500px;
-  }
-  #salesChart {
-    width: 100%;
-    height: auto;
-  }
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  max-height: 500px;
+}
+#salesChart {
+  width: 100%;
+  height: auto;
+}
 </style>
