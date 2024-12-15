@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import  db  from '../firebase/init'
-import { doc, setDoc, updateDoc, getDocs, collection, query, orderBy, limit, deleteDoc, addDoc, getDoc } from 'firebase/firestore'
+import { doc, addDoc, updateDoc, collection, deleteDoc, onSnapshot, setDoc, getDocs, query, orderBy, limit } from 'firebase/firestore'
 
 
 export const useCarStore = defineStore('carStore', {
@@ -19,6 +19,8 @@ export const useCarStore = defineStore('carStore', {
     ],
     isDataFetched: false,
     soldCars: [],
+    totalSales: 0,
+    totalSoldCount: 0,
     currentPage: 1,
     itemsPerPage: 5,
     searchQuery: "",
@@ -73,43 +75,51 @@ export const useCarStore = defineStore('carStore', {
       const startIndex = (state.currentPage - 1) * state.itemsPerPage;
       return state.sortedCars.slice(startIndex, startIndex + state.itemsPerPage);
     },
-    getTotalCarSold: async () => {
-      let totalSoldCount = 0;
-      const querySnapshot = await getDocs(collection(db, "carSold"));
-
-      querySnapshot.forEach((doc) => {
-        const soldCarData = doc.data();
-        totalSoldCount += soldCarData.quantity;  // Adding the quantity field
-      });
-
-      return totalSoldCount;
-    },
-    getTotalCarSoldCount: async () => {
-      let totalSold = 0;
-      const querySnapshot = await getDocs(collection(db, "carSold"));
-
-      querySnapshot.forEach((doc) => {
-        const soldCarData = doc.data();
-        totalSold += soldCarData.soldQuantity;
-      });
-
-      return totalSold;
-    },
   },
 
   actions: {
     async getCars() {
       if (this.isDataFetched) return;
 
-      const querySnapshot = await getDocs(collection(db, "cars"));
-      querySnapshot.forEach((doc) => {
-        this.cars.push(doc.data());
-      });
+      onSnapshot(collection(db, "cars"), (querySnapshot) => {
+        this.cars = [];
+        querySnapshot.forEach((doc) => {
+          this.cars.push(doc.data());
+        });
 
-      this.calculateTotalSalesCount();
-      this.calculateTotalSales();
-      this.isDataFetched = true;
+        this.isDataFetched = true;
+      });
     },
+
+    async getSoldCars() {
+      onSnapshot(collection(db, "carSold"), (querySnapshot) => {
+        this.soldCars = [];
+        querySnapshot.forEach((doc) => {
+          this.soldCars.push(doc.data());
+        });
+
+        this.calculateTotalSales();
+        this.calculateTotalSalesCount();
+        console.log('Sold Cars:', this.soldCars);
+      });
+    },
+
+    calculateTotalSalesCount() {
+      this.totalSoldCount = this.soldCars.reduce(
+        (total, soldCar) => total + soldCar.soldQuantity,
+        0
+      );
+      console.log('Total Sold Count:', this.totalSoldCount);
+    },
+
+    calculateTotalSales() {
+      this.totalSales = this.soldCars.reduce(
+        (total, soldCar) => total + soldCar.price,
+        0
+      );
+      console.log('Total Sales:', this.totalSales);
+    },
+
     changeSort(column) {
       if (this.sortBy === column) {
         this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
@@ -120,8 +130,13 @@ export const useCarStore = defineStore('carStore', {
     },
 
     formatPrice(value) {
-      if (typeof value !== 'number') return '₱0';
-      return `₱${value.toLocaleString('en-US')}`;
+      if (typeof value !== 'number' || isNaN(value)) return '₱0.00';
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(value).replace('PHP', '₱').trim();
     },
 
     nextPage() {
@@ -152,15 +167,6 @@ export const useCarStore = defineStore('carStore', {
       this.resetValidationErrors();
     },
 
-    deleteCar(id) {
-      const carRef = doc(db, "cars", id.toString());
-      deleteDoc(carRef)
-        .then(() => {
-          this.cars = this.cars.filter((car) => car.id !== id);
-          this.closeDeleteModal();
-        })
-    },
-
     openDeleteCarModal(car) {
       this.carToDelete = { ...car };
       this.isDeleteModalVisible = true;
@@ -179,80 +185,105 @@ export const useCarStore = defineStore('carStore', {
       this.isSoldModalVisible = false;
     },
 
+    deleteCar(id) {
+      const carToDelete = this.cars.find(car => car.id === id);
+      if (carToDelete) {
+        // Add the car information to the carDeleted collection
+        const carDeletedRef = collection(db, "carDeleted");
+        addDoc(carDeletedRef, {
+          id: carToDelete.id,
+          unitName: carToDelete.unitName,
+          quantity: carToDelete.quantity,
+          price: carToDelete.price,
+          dateDeleted: new Date(),
+        });
+
+        // Remove the car from the current inventory
+        this.cars = this.cars.filter((car) => car.id !== id);
+
+        const docRef = doc(db, "cars", id.toString());
+        deleteDoc(docRef);
+
+        this.closeDeleteModal();
+      }
+    },
+
     async markAsSold() {
-      // Ensure that there are cars to sell
-      if (this.soldCar.soldQuantity > 0 && this.soldCar.soldQuantity <= this.soldCar.quantity) {
-        // Reduce the quantity of the car in the cars collection
+      this.validateField('soldQuantity');
+
+      if (this.validationErrors.soldQuantity) {
+        console.error('Validation error:', this.validationErrors.soldQuantity);
+        return;
+      }
+
+      const cars = this.cars.find((car) => car.id === this.soldCar.id);
+      if (cars && cars.quantity > 0 && cars.quantity >= this.soldCar.soldQuantity) {
+        cars.quantity -= this.soldCar.soldQuantity;
+
+        this.calculateTotalSalesCount();
+        this.calculateTotalSales();
+
         const carRef = doc(db, "cars", this.soldCar.id.toString());
-        const carSnapshot = await getDoc(carRef);
-        const carData = carSnapshot.data();
+        await updateDoc(carRef, {
+          quantity: cars.quantity,
+        });
 
-        // Update the quantity in the cars collection
-        const newQuantity = carData.quantity - this.soldCar.soldQuantity;
-        await updateDoc(carRef, { quantity: newQuantity });
+        const totalSoldPrice = this.soldCar.soldQuantity * this.soldCar.price;
 
-        // Add the sold car to the carSold collection with Firestore-generated ID
-        const soldCarData = {
+        const soldCarRef = collection(db, "carSold");
+        await addDoc(soldCarRef, {
           unitName: this.soldCar.unitName,
           customer: this.soldCar.customer,
           soldQuantity: this.soldCar.soldQuantity,
-          price: this.soldCar.price,
+          price: totalSoldPrice,
           dateSold: new Date(),
-        };
-
-        // Firestore will generate a unique ID for the new document
-        await addDoc(collection(db, "carSold"), soldCarData);
-
-        // Optionally, you can also add the sold car to the `soldCars` state for UI tracking
-        this.soldCars.push(soldCarData);
-
-        // Close the modal and reset the sold car data
-        this.closeSoldModal();
-      } else {
-        console.error("Sold quantity exceeds available quantity.");
+        });
       }
+      this.closeSoldModal();
     },
+
     async saveCar() {
+      this.validateField('unitName');
+      this.validateField('quantity');
+      this.validateField('price');
+
       if (Object.values(this.validationErrors).some((error) => error !== '')) {
         return;
       }
 
-      if (this.modalCar.id) {
-        const carRef = doc(db, "cars", this.modalCar.id.toString());
-        await updateDoc(carRef, {
-          unitName: this.modalCar.unitName,
-          quantity: this.modalCar.quantity,
-          price: this.modalCar.price,
-        });
+      try {
+        if (this.modalCar.id) {
+          const carRef = doc(db, "cars", this.modalCar.id.toString());
+          await updateDoc(carRef, {
+            unitName: this.modalCar.unitName,
+            quantity: this.modalCar.quantity,
+            price: this.modalCar.price,
+          });
+        } else {
+          const carsRef = collection(db, "cars");
+          const q = query(carsRef, orderBy("id", "desc"), limit(1));
+          const querySnapshot = await getDocs(q);
 
-        const index = this.cars.findIndex((car) => car.id === this.modalCar.id);
-        if (index !== -1) {
-          this.cars[index] = { ...this.modalCar };
+          let newId = 1;
+          if (!querySnapshot.empty) {
+            const lastCar = querySnapshot.docs[0].data();
+            newId = lastCar.id + 1;
+          }
+
+          const carData = {
+            id: newId,
+            unitName: this.modalCar.unitName,
+            quantity: this.modalCar.quantity,
+            price: this.modalCar.price,
+          };
+
+          await setDoc(doc(db, "cars", newId.toString()), carData);
         }
-      } else {
-        const carsRef = collection(db, "cars");
-        const q = query(carsRef, orderBy("id", "desc"), limit(1));
-        const querySnapshot = await getDocs(q);
 
-        let newId = 1;
-        if (!querySnapshot.empty) {
-          const lastCar = querySnapshot.docs[0].data();
-          newId = lastCar.id + 1;
-        }
-
-        const carData = {
-          id: newId,
-          unitName: this.modalCar.unitName,
-          quantity: this.modalCar.quantity,
-          price: this.modalCar.price,
-        };
-
-        await setDoc(doc(db, "cars", newId.toString()), carData);
-
-        this.cars.push(carData);
+        this.closeModal();
+      } catch (error) {
+        console.error('Error saving car:', error);
       }
-
-      this.closeModal();
     },
 
     resetValidationErrors() {
@@ -267,51 +298,46 @@ export const useCarStore = defineStore('carStore', {
     validateField(field) {
       switch (field) {
         case 'unitName':
-          this.validationErrors.unitName = this.modalCar.unitName ? '' : 'Unit name is required.';
-          this.showUnitNameError = !!this.validationErrors.unitName;
+          this.validationErrors.unitName = this.modalCar.unitName.trim()
+            ? ''
+            : 'Unit name is required.';
           break;
         case 'quantity':
-          this.validationErrors.quantity = this.modalCar.quantity > 0 ? '' : 'Quantity must be greater than 0.';
-          this.showQuantityError = !!this.validationErrors.quantity;
+          if (this.modalCar.quantity <= 0) {
+            this.validationErrors.quantity = 'Quantity must be greater than 0.';
+          } else if (!Number.isInteger(this.modalCar.quantity)) {
+            this.validationErrors.quantity = 'Quantity must be a whole number.';
+          } else {
+            this.validationErrors.quantity = '';
+          }
           break;
         case 'price':
-          this.validationErrors.price = this.modalCar.price > 0 ? '' : 'Price must be greater than 0.';
-          this.showPriceError = !!this.validationErrors.price;
+          if (isNaN(this.modalCar.price) || this.modalCar.price <= 0) {
+            this.validationErrors.price = 'Price must be a positive number.';
+          } else {
+            this.validationErrors.price = '';
+          }
           break;
         case 'customer':
-          this.validationErrors.customer = this.soldCar.customer ? '' : 'Customer name is required.';
-          this.showCustomerError = !!this.validationErrors.customer;
+          this.validationErrors.customer = this.soldCar.customer.trim()
+            ? ''
+            : 'Customer name is required.';
+          break;
+        case 'soldQuantity':
+          if (!Number.isInteger(this.soldCar.soldQuantity)) {
+            this.validationErrors.soldQuantity = 'Quantity sold must be a whole number.';
+          } else if (this.soldCar.soldQuantity <= 0) {
+            this.validationErrors.soldQuantity = 'Quantity sold must be greater than 0.';
+          } else if (this.soldCar.soldQuantity > this.soldCar.quantity) {
+            this.validationErrors.soldQuantity = 'Not enough stock available.';
+          } else {
+            this.validationErrors.soldQuantity = '';
+          }
           break;
         default:
           break;
       }
     },
-
-    async calculateTotalSalesCount() {
-      const querySnapshot = await getDocs(collection(db, "carSold"));
-      let totalSalesCount = 0;
-
-      querySnapshot.forEach((doc) => {
-        const soldCarData = doc.data();
-        totalSalesCount += soldCarData.soldQuantity;
-      });
-
-      console.log('Total number of sales:', totalSalesCount);
-      return totalSalesCount;
-    },
-
-    async calculateTotalSales() {
-      const querySnapshot = await getDocs(collection(db, "carSold"));
-      let totalSales = 0;
-
-      querySnapshot.forEach((doc) => {
-        const soldCarData = doc.data();
-        totalSales += soldCarData.soldQuantity * soldCarData.price; // Multiply sold quantity by price
-      });
-
-      console.log('Total sales amount:', totalSales);
-      return totalSales;
-    }
   },
   persist: true,
 });

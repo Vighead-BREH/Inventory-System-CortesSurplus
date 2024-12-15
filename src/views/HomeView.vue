@@ -8,27 +8,46 @@ import InventoryTracking from '@/components/InventoryTracking.vue'
 import MaterialCharts from '@/components/MaterialsChart.vue'
 import { useMaterialsStore } from '@/stores/materialsStore'
 import { useCarStore } from '@/stores/carStore'
+import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
+const router = useRouter();
+
+const authStore = useAuthStore();
+if (authStore.isLogin) {
+  console.log('Logged in');
+} else {
+  console.log('Not logged in');
+  router.push('/');
+}
 
 const isSidebarVisible = ref(false)
 const carStore = useCarStore()
 const materialsStore = useMaterialsStore()
 
-const totalSales = ref(0)
+const totalSales = computed(() => carStore.totalSales)
 const totalStock = computed(() => materialsStore.totalStock)
+computed(() => materialsStore.totalStockUsed)
+computed(() => carStore.totalSoldCount)
 
 onMounted(async () => {
   await carStore.getCars()
+  await carStore.getSoldCars()
+  await materialsStore.getMaterialsUsed()
   await materialsStore.getMaterials()
-
-  totalSales.value = await carStore.calculateTotalSales()
 })
 
 function toggleSidebar() {
   isSidebarVisible.value = !isSidebarVisible.value
 }
 
-function formatPrice(amount) {
-  return `₱${amount.toLocaleString('en-US')}`
+function formatPrice(value) {
+  if (typeof value !== 'number' || isNaN(value)) return '₱0.00';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value).replace('PHP', '₱').trim();
 }
 
 function formatMaterials(amount) {
@@ -63,7 +82,7 @@ function formatMaterials(amount) {
               <div class="total-sales-card">
                 <h2><i class="fas fa-peso-sign"></i> Monthly Performance</h2>
                 <p>
-                  Total Sales: <span class="highlight">{{ formatPrice(totalSales) }}</span>
+                  Total Sales: <span class="highlight">{{ formatPrice(totalSales || 0) }}</span>
                 </p>
               </div>
               <div class="total-order-card">

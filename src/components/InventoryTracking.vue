@@ -5,6 +5,7 @@
         <input
           v-model="searchQuery"
           type="text"
+          id="search-inp"
           placeholder="Search materials..."
           class="search-input"
           @input="filterMaterials"
@@ -20,14 +21,24 @@
     <table>
       <thead>
         <tr>
-          <th>Material</th>
-          <th>Stock</th>
+          <th @click="changeSort('name')">
+            <div class="th-gap">
+              <span class="nowrap">Material</span>
+              <span class="sort-icon">{{ getSortIcon('name') }}</span>
+            </div>
+          </th>
+          <th @click="changeSort('stock')">
+            <div class="th-gap">
+              <span class="nowrap">Stock</span>
+              <span class="sort-icon">{{ getSortIcon('stock') }}</span>
+            </div>
+          </th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in paginatedMaterials" :key="item.id">
+        <tr v-for="item in materialsStore.sortedMaterials" :key="item.id">
           <td>{{ item.name }}</td>
           <td>{{ formatQuantity(item.stock) }}</td>
           <td>
@@ -61,6 +72,7 @@
     </button>
   </div>
 
+  <!-- Add or Edit Material Modal -->
   <div v-if="isModalVisible" class="modal-backdrop" @click="closeModal">
     <div class="modal" @click.stop="">
       <div class="modal-content">
@@ -71,12 +83,22 @@
           id="name"
           type="text"
           placeholder="Enter material name"
+          @input="validateField('name')"
+          @blur="validateField('name')"
         />
+        <p v-if="materialsStore.showUnitNameError" class="error">{{ materialsStore.validationErrors.name }}</p>
         <label for="stock">Stock:</label>
-        <input v-model="modalMaterial.stock" id="stock" type="number" />
+        <input
+          v-model="modalMaterial.stock"
+          id="stock"
+          type="number"
+          @input="validateField('stock')"
+          @blur="validateField('stock')"
+        />
+        <p v-if="materialsStore.showStockError" class="error">{{ materialsStore.validationErrors.stock }}</p>
         <div>
           <div class="modal-buttons btn-gap">
-            <button @click="saveMaterial">Save</button>
+            <button @click="saveMaterial" :disabled="hasValidationErrors">Save</button>
             <button @click="closeModal">Cancel</button>
           </div>
         </div>
@@ -103,9 +125,15 @@
       <div class="modal-content">
         <h2>Material Used</h2>
         <label for="stock">Quantity Used:</label>
-        <input v-model="modalMaterial.stock" id="stock" type="number" />
+        <input
+          v-model="modalMaterial.stock"
+          id="stock"
+          type="number"
+          @input="validateField('stock')"
+          @blur="validateField('stock')"
+        />
         <div class="modal-buttons btn-gap">
-          <button @click="usedMaterial">Use</button>
+          <button @click="usedMaterial" :disabled="hasValidationErrors">Use</button>
           <button @click="closeUsedModal">Close</button>
         </div>
       </div>
@@ -128,6 +156,9 @@ export default {
       isUsedModalVisible: false,
       modalMaterial: { id: null, name: '', stock: 0 },
       modalAction: 'Add',
+      sortBy: '',
+      sortOrder: 'asc',
+      viewModalVisible: false,
     }
   },
   computed: {
@@ -147,6 +178,15 @@ export default {
     },
   },
   methods: {
+    changeSort(column) {
+      this.materialsStore.changeSort(column);
+    },
+    getSortIcon(column) {
+      if (this.materialsStore.sortBy === column) {
+        return this.materialsStore.sortOrder === 'asc' ? '⬆' : '⬇';
+      }
+      return '⬍';
+    },
     filterMaterials() {
       this.currentPage = 1
     },
@@ -196,6 +236,7 @@ export default {
     },
     closeModal() {
       this.isModalVisible = false
+      this.resetValidationErrors();
     },
     closeUsedModal() {
       this.isUsedModalVisible = false
@@ -231,6 +272,25 @@ td {
 th {
   background-color: #040d1d;
   color: #fff;
+  cursor: pointer;
+}
+
+.sort-icon {
+  font-size: 15px;
+  color: #007bff;
+}
+.sort-icon:hover {
+  color: #fff;
+}
+
+th.nowrap {
+  white-space: nowrap;
+}
+
+.th-gap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 button {
@@ -359,6 +419,12 @@ button:hover {
   border-radius: 3px;
   font-size: 14px;
   box-sizing: border-box;
+}
+
+.error {
+  color: red;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
 }
 
 @keyframes fadeIn {

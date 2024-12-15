@@ -5,6 +5,7 @@
         <input
           v-model="carStore.searchQuery"
           type="text"
+          id="search-input"
           placeholder="Search cars..."
           class="search-input"
         />
@@ -394,6 +395,7 @@ h2 {
 .quantity-indicator {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .led {
@@ -442,7 +444,7 @@ h2 {
 }
 
 .sort-icon {
-  font-size: 12px;
+  font-size: 15px;
   color: #007bff;
 }
 .sort-icon:hover {

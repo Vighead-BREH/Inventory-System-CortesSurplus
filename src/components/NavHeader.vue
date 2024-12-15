@@ -2,37 +2,63 @@
   <header class="app-header">
     <div class="container">
       <div class="logo-container">
-        <img src="/src/components/Logo/CortesSurplusLogo.png" class="logo">
+        <img src="/src/components/Logo/CortesSurplusLogo.png" class="logo" />
         <h1>Cortes Surplus</h1>
       </div>
-      <button
-        @click="toggleSidebar"
-        class="sidebar-toggle-btn"
-        :class="{ 'active': isButtonActive }">
-        ☰
-      </button>
+      <div class="login-container">
+        <!-- Show user icon only if isLogin is true -->
+        <div v-if="isLogin" class="user-icon">
+          <i class="fas fa-user-cog"></i>
+        </div>
+        <button
+          @click="toggleSidebar"
+          class="sidebar-toggle-btn"
+          :class="{ 'active': isButtonActive }"
+        >
+          ☰
+        </button>
+      </div>
     </div>
   </header>
 </template>
 
 <script>
+import { useAuthStore } from "@/stores/auth";
+
 export default {
   name: "NavHeader",
   data() {
     return {
-      isButtonActive: false
+      isButtonActive: false,
     };
+  },
+  computed: {
+    // Access isLogin from Pinia store
+    isLogin() {
+      const authStore = useAuthStore();
+      return authStore.isLogin;
+    },
   },
   methods: {
     toggleSidebar() {
       this.isButtonActive = !this.isButtonActive;
-      this.$emit('toggle-sidebar');
-    }
-  }
+      this.$emit("toggle-sidebar");
+    },
+  },
 };
 </script>
 
 <style scoped>
+.login-container {
+  display: flex;
+  align-items: center;
+}
+
+.user-icon {
+  margin-right: 10px;
+  font-size: 1.5rem;
+}
+
 .app-header {
   background-color: #040d1d;
   color: #fff;

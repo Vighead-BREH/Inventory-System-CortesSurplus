@@ -21,14 +21,16 @@
 
 <script setup>
 import { ref } from "vue";
+import { useCarStore } from '@/stores/carStore';
 
 const report = ref([]);
+const carStore = useCarStore();
 
 function generateReport() {
+  const totalSoldCount = carStore.totalSoldCount;
+
   report.value = [
-    { date: "2024-11-01", totalSales: 1000 },
-    { date: "2024-11-02", totalSales: 1200 },
-    { date: "2024-11-03", totalSales: 900 },
+    { date: "2024-11-01", totalSales: totalSoldCount },
   ];
 }
 </script>

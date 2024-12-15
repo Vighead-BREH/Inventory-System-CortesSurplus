@@ -4,6 +4,17 @@ import NavHeader from "../components/NavHeader.vue";
 import NavSideBar from "../components/NavSideBar.vue";
 import SalesChart from "@/components/SalesChart.vue";
 import SalesReports from "@/components/SalesReport.vue";
+import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
+const router = useRouter();
+
+const authStore = useAuthStore();
+if (authStore.isLogin) {
+  console.log('Logged in');
+} else {
+  console.log('Not logged in');
+  router.push('/');
+}
 
 const isSidebarVisible = ref(false);
 

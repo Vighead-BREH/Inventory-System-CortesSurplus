@@ -1,7 +1,7 @@
 <template>
   <div>
     <div>
-      <select @change="changeTimeframe" v-model="selectedTimeframe">
+      <select @change="changeTimeframe" v-model="selectedTimeframe" id="timeframe-selector">
         <option value="weekly">Weekly</option>
         <option value="monthly">Monthly</option>
         <option value="yearly">Yearly</option>
@@ -29,52 +29,31 @@ export default {
       },
       labels: {
         weekly: ['Week1', 'Week2', 'Week3', 'Week4', 'Week5', 'Week6', 'Week7'],
-        monthly: [
-          'Jan',
-          'Feb',
-          'Mar',
-          'Apr',
-          'May',
-          'Jun',
-          'Jul',
-          'Aug',
-          'Sep',
-          'Oct',
-          'Nov',
-          'Dec',
-        ],
+        monthly: [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ],
         yearly: ['2022', '2023', '2024'],
       },
     }
   },
   mounted() {
-    this.initializeChart()
+    const store = useCarStore();
+    this.salesCount.weekly = [store.totalSoldCount, 0, 0, 0, 0, 0, 0];
+    this.salesCount.monthly = [store.totalSoldCount, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    this.salesCount.yearly = [store.totalSoldCount, 0, 0];
+    this.createChart();
 
     watch(
-      async () => {
-        const store = useCarStore()
-        const totalSold = await store.getTotalCarSoldCount
-        return totalSold
-      },
+      () => store.totalSoldCount,
       (newValue) => {
         this.updateChartWithNewValue(newValue)
       },
+
     )
   },
   watch: {
     selectedTimeframe: 'createChart',
   },
   methods: {
-    async initializeChart() {
-      const store = useCarStore()
-      const totalSold = await store.getTotalCarSoldCount
 
-      this.salesCount.weekly = [totalSold, 0, 0, 0, 0, 0, 0]
-      this.salesCount.monthly = [totalSold, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-      this.salesCount.yearly = [totalSold, 0, 0]
-
-      this.createChart()
-    },
     createChart() {
       const ctx = document.getElementById('salesChart').getContext('2d')
 

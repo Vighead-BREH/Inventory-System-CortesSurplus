@@ -5,6 +5,17 @@ import NavSideBar from '../components/NavSideBar.vue'
 import InventoryTracking from '@/components/InventoryTracking.vue'
 import CarTable from '@/components/CarTable.vue'
 import MaterialsChart from '@/components/MaterialsChart.vue'
+import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
+const router = useRouter();
+
+const authStore = useAuthStore();
+if (authStore.isLogin) {
+  console.log('Logged in');
+} else {
+  console.log('Not logged in');
+  router.push('/');
+}
 
 const isSidebarVisible = ref(false)
 

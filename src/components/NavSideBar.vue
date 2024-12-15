@@ -1,12 +1,23 @@
 <script setup>
-import '@fortawesome/fontawesome-free/css/all.css'
-import '@fortawesome/fontawesome-free/js/all.js'
+import { useAuthStore } from "@/stores/auth";
+import "@fortawesome/fontawesome-free/css/all.css";
+import "@fortawesome/fontawesome-free/js/all.js";
+import { useRouter } from "vue-router";
+const router = useRouter();
+// Access Pinia store
+const authStore = useAuthStore();
+
+const handleLogout = () => {
+  authStore.logout();
+  router.push("/");
+};
 </script>
+
 <template>
   <div :class="['sidebar', { visible: visible }]">
     <ul>
       <li>
-        <router-link to="/"> <i class="fas fa-home"></i> Home </router-link>
+        <router-link to="/home"> <i class="fas fa-home"></i> Home </router-link>
       </li>
       <li>
         <router-link to="/sales"> <i class="fas fa-chart-line"></i> Sales </router-link>
@@ -17,6 +28,11 @@ import '@fortawesome/fontawesome-free/js/all.js'
       <li>
         <a href="#"> <i class="fas fa-address-book"></i> Contacts </a>
       </li>
+      <li>
+        <a href="#" @click="handleLogout">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+      </li>
     </ul>
   </div>
 
@@ -25,7 +41,7 @@ import '@fortawesome/fontawesome-free/js/all.js'
 
 <script>
 export default {
-  name: 'NavSideBar',
+  name: "NavSideBar",
   props: {
     visible: {
       type: Boolean,
@@ -34,11 +50,12 @@ export default {
   },
   methods: {
     closeSidebar() {
-      this.$emit('toggle-sidebar')
+      this.$emit("toggle-sidebar");
     },
   },
-}
+};
 </script>
+
 
 <style scoped>
 .sidebar {
